@@ -1,2 +1,3 @@
 # covid19_prognoses
-Test
+
+R code for short-term COVID19 prognoses based on 
