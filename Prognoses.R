@@ -35,7 +35,7 @@ IC   <- c(78, 96, 120, 150,
 IC_I <- IC - shift(IC, n=1, fill=0, type="lag")
 dag  <- 1:length(IC)
 
-png("ICopnames.png", width = 900, height = 600, pointsize = 18)
+png("ICopnames.png", width = 1000, height = 600, pointsize = 18)
 par(mar=c(5.1, 4.1, 4.1, 1.1))
 
 plot(IC_I ~ dag, ylim = c(-50, 100), xlim = c(0, length(dag)),
@@ -61,10 +61,10 @@ dday$inc
 CoV  <- dday$inc
 dag  <- seq(1, length(CoV))
 
-png("incidentie_RIVM.png", width = 900, height = 600, pointsize = 18)
+png("incidentie_RIVM.png", width = 1000, height = 600, pointsize = 18)
 par(mar=c(5.1, 4.1, 4.1, 1.1))
 
-plot(CoV ~ dag, ylim = c(0, 6000), xlim = c(1, length(dag)),
+plot(CoV ~ dag, ylim = c(0, 7000), xlim = c(1, length(dag)),
      ylab = "", xlab = "Datum",
      xaxt = "n", yaxt = "n", pch = 16, cex = 0.6,
      main = "COVID-19 - incidentie")
@@ -86,7 +86,7 @@ dday$inc
 CoV  <- dday$inc
 dag  <- seq(1, length(CoV))
 
-png("incidentie_RIVM_limb.png", width = 800, height = 600, pointsize = 18)
+png("incidentie_RIVM_limb.png", width = 1000, height = 600, pointsize = 18)
 par(mar=c(5.1, 4.1, 4.1, 1.1))
 
 plot(CoV ~ dag, ylim = c(0, 200), xlim = c(1, length(dag)),
@@ -112,7 +112,7 @@ dday$inc
 opge  <- dday$inc
 dago <- seq(1, length(opge))
 
-png("opnames_NL.png", width = 900, height = 600, pointsize = 18)
+png("opnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar=c(5.1, 4.1, 4.1, 1.1))
 
 plot(opge ~ dago, ylim = c(0, 140), xlim = c(1, length(dago)),
@@ -140,7 +140,7 @@ opge  <- dday$inc
 dago <- seq(1, length(opge))
 
 ########## Figuur ##########
-png("opnames_limb.png", width = 800, height = 600, pointsize = 18)
+png("opnames_limb.png", width = 1000, height = 600, pointsize = 18)
 par(mar=c(5.1, 4.1, 4.1, 1.1))
 
 plot(opge ~ dago, ylim = c(0, 100), xlim = c(1, length(dago)),
