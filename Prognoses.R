@@ -13,11 +13,8 @@ dat_NICE <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-ic
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
 
 # Data manipulation
-dat_NICE <- subset(dat_NICE, as.Date(dat_NICE$Datum) >= as.Date("2020-3-13")) # Select same start date as RIVM data
 IC <- dat_NICE$CumulatiefOpnamen # Total number of IC intakes since the start of the outbreak
 IC_COV <- dat_NICE$ToenameOpnamen # Number of newly confirmed or suspected COVID-19 IC intakes 
-IC <- IC[1:(length(IC) - 2)] # Remove last 2 rows (as these are still being updated)
-IC_COV <- IC_COV[1:(length(IC_COV) - 2)]  # Remove last 2 rows (as these are still being updated)
 COV <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, data = dat_RIVM)
 COV_limb <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, 
                       data = subset(dat_RIVM, Province == "Limburg"))
@@ -32,12 +29,20 @@ Death_limb <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum,
 # I = incidentie, C = cumulatieve incidentie
 IC <- data.frame(C = IC,
                  I = IC - shift(IC, n=1, fill=0, type="lag"),
-                 dag = 1:length(IC)
+                 dag = 1:length(IC),
+                 date = dat_NICE$Datum
 )
 
 IC_COV <- data.frame(I = IC_COV,
-                         dag = 1:length(IC_COV)
+                     dag = 1:length(IC_COV),
+                     date = dat_NICE$Datum
 )
+IC <- subset(IC, as.Date(IC$date) >= as.Date("2020-3-13")) # Select same start date as RIVM data
+IC_COV <- subset(IC_COV, as.Date(IC_COV$date) >= as.Date("2020-3-13")) # Select same start date as RIVM data
+IC <- IC[1:(dim(IC)[1] - 2),] # Remove last 2 rows (as these are still being updated)
+IC_COV <- IC_COV[1:(dim(IC_COV)[1] - 2),]  # Remove last 2 rows (as these are still being updated)
+IC$dag <- 1:dim(IC)[1]
+IC_COV$dag <- 1:dim(IC_COV)[1]
 
 COV <- data.frame(C = COV$Total_reported,
                   I = COV$Total_reported - shift(COV$Total_reported, n=1, fill=0, type="lag"),
@@ -53,7 +58,7 @@ Hosp <- data.frame(C = Hosp$Hospital_admission,
                    I_limb = Hosp_limb$Hospital_admission - shift(Hosp_limb$Hospital_admission, n=1, fill=0, type="lag")
 )
 Hosp$I <- pmax(Hosp$I, 0) # correct for data errors
-Hosp$I_limb <- pmax(Hosp$I, 0) # correct for data errors
+Hosp$I_limb <- pmax(Hosp$I_limb, 0) # correct for data errors
 
 Death <- data.frame(C = Death$Deceased,
                     I = Death$Deceased - shift(Death$Deceased, n=1, fill=0, type="lag"),
@@ -223,10 +228,10 @@ dev.off()
 png("Figures/Opnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Hosp$I ~ Hosp$dag, ylim = c(0, ceiling(max(Hosp$I)/50) * 50), xlim = c(1, length(Hosp$dag)), ylab = "", 
+plot(Hosp$I ~ Hosp$dag, ylim = c(0, ceiling(max(Hosp$I)/100) * 100), xlim = c(1, length(Hosp$dag)), ylab = "", 
      xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, cex = 0.6, main = "COVID-19 ziekenhuisopnames - incidentie")
 axis(side = 1, at = seq(1, length(Hosp$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(0, ceiling(max(Hosp$I)/50) * 50, 50)
+tick_o <- seq(0, ceiling(max(Hosp$I)/100) * 100, 100)
 axis(side = 2, at = tick_o)
 abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(Hosp$dag) + 9)/7), lty = 3)
 
@@ -236,10 +241,10 @@ dev.off()
 png("Figures/Opnames_limb.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Hosp$I_limb ~ Hosp$dag, ylim = c(0, ceiling(max(Hosp$I_limb)/25) * 25), xlim = c(1, length(Hosp$dag)), ylab = "", 
+plot(Hosp$I_limb ~ Hosp$dag, ylim = c(0, ceiling(max(Hosp$I_limb)/50) * 50), xlim = c(1, length(Hosp$dag)), ylab = "", 
      xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, cex = 0.6, main = "COVID-19 ziekenhuisopnames Limburg - incidentie")
 axis(side = 1, at = seq(1, length(Hosp$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(0, ceiling(max(Hosp$I_limb)/25) * 25, 25)
+tick_o <- seq(0, ceiling(max(Hosp$I_limb)/50) * 50, 50)
 axis(side = 2, at = tick_o)
 abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(Hosp$dag) + 9)/7), lty = 3)
 
@@ -251,7 +256,7 @@ png("Figures/Overlijdens_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Death$I ~ Death$dag, ylim = c(0, ceiling(max(Death$I)/50) * 50), xlim = c(1, length(Death$dag)), 
-     ylab = "", xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, cex = 0.6, main = "COVID-19 - incidentie")
+     ylab = "", xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, cex = 0.6, main = "COVID-19 sterfte - incidentie")
 axis(side = 1, at = seq(1, length(Death$dag) + 2, 14), labels = lbls, tick = FALSE)
 tick_o <- seq(0, ceiling(max(Death$I)/50) * 50, 50)
 axis(side = 2, at = tick_o)
@@ -265,7 +270,7 @@ par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Death$I_limb ~ Death$dag, ylim = c(0, ceiling(max(Death$I_limb)/10) * 10), 
      xlim = c(1, length(Death$dag)), ylab = "", xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, 
-     cex = 0.6, main = "COVID-19 in Limburg - incidentie")
+     cex = 0.6, main = "COVID-19 sterfte Limburg - incidentie")
 axis(side = 1, at = seq(1, length(Death$dag) + 2, 14), labels = lbls, tick = FALSE)
 tick_o <- seq(0, ceiling(max(Death$I_limb)/10) * 10, 10)
 axis(side = 2, at = tick_o)
