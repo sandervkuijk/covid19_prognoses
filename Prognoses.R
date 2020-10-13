@@ -8,16 +8,16 @@ library(forecast)
 palette(c("black", "white"))
 lbls <- format(seq(as.Date("2020-3-13"), Sys.Date() + 2, by = "2 week"), "%e\n%b")
 
-###### RETRIEVE DATA ######
+###### RETRIEVE AND MANIPULATE DATA ######
 dat_NICE <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-ic/data-nice/NICE_IC_wide_latest.csv?raw=true") # https://stichting-nice.nl/ & https://github.com/J535D165/CoronaWatchNL
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
 
 # Data manipulation
-dat_NICE <- subset(dat_NICE, as.Date(dat_NICE$Datum) >= as.Date("2020-3-13")) # select same start date as RIVM data
-IC <- dat_NICE$TotaalOpnamen #Total number of IC intakes
-IC_COV_new <- dat_NICE$ToenameOpnamen #Number of newly confirmed or suspected COVID-19 IC intakes 
-IC <- IC[1:(length(IC) - 2)] #Remove last 2 rows (as these are still being updated)
-IC_COV_new <- IC_COV_new[1:(length(IC_COV_new) - 2)]  #Remove last 2 rows (as these are still being updated)
+dat_NICE <- subset(dat_NICE, as.Date(dat_NICE$Datum) >= as.Date("2020-3-13")) # Select same start date as RIVM data
+IC <- dat_NICE$CumulatiefOpnamen # Total number of IC intakes since the start of the outbreak
+IC_COV <- dat_NICE$ToenameOpnamen # Number of newly confirmed or suspected COVID-19 IC intakes 
+IC <- IC[1:(length(IC) - 2)] # Remove last 2 rows (as these are still being updated)
+IC_COV <- IC_COV[1:(length(IC_COV) - 2)]  # Remove last 2 rows (as these are still being updated)
 COV <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, data = dat_RIVM)
 COV_limb <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, 
                       data = subset(dat_RIVM, Province == "Limburg"))
@@ -28,15 +28,15 @@ Death <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, data = dat_RI
 Death_limb <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, 
                         data = subset(dat_RIVM, Province == "Limburg"))
 
-###### CREATE DATAFRAMES ######
-# A = huidig aantal, I = incidentie, C = cumulatieve incidentie
-IC <- data.frame(A = IC,
+# Create dataframes 
+# I = incidentie, C = cumulatieve incidentie
+IC <- data.frame(C = IC,
                  I = IC - shift(IC, n=1, fill=0, type="lag"),
                  dag = 1:length(IC)
 )
 
-IC_COV_new <- data.frame(I = IC_COV_new,
-                         dag = 1:length(IC_COV_new)
+IC_COV <- data.frame(I = IC_COV,
+                         dag = 1:length(IC_COV)
 )
 
 COV <- data.frame(C = COV$Total_reported,
@@ -52,6 +52,8 @@ Hosp <- data.frame(C = Hosp$Hospital_admission,
                    C_limb = Hosp_limb$Hospital_admission,
                    I_limb = Hosp_limb$Hospital_admission - shift(Hosp_limb$Hospital_admission, n=1, fill=0, type="lag")
 )
+Hosp$I <- pmax(Hosp$I, 0) # correct for data errors
+Hosp$I_limb <- pmax(Hosp$I, 0) # correct for data errors
 
 Death <- data.frame(C = Death$Deceased,
                     I = Death$Deceased - shift(Death$Deceased, n=1, fill=0, type="lag"),
@@ -86,27 +88,27 @@ lines(loess$x, arima$fitted, col = "blue")
 lines(pred$time, pred$IC_I_arima, col = "blue", lty= 3)
 
 ### IC COVID-19 NEW ###
-pred$time = seq(length(IC_COV_new$dag) + 1, length.out = 7)
+pred$time = seq(length(IC_COV$dag) + 1, length.out = 7)
 
 # loess
-loess <- loess(I ~ dag, IC_COV_new, control = loess.control(surface = "direct"), span = 0.25)
-pred$IC_COV_new_I_loess <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[1]]
-pred$IC_COV_new_I_loess_se <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[2]]
+loess <- loess(I ~ dag, IC_COV, control = loess.control(surface = "direct"), span = 0.25)
+pred$IC_COV_I_loess <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[1]]
+pred$IC_COV_I_loess_se <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[2]]
 
 # arima
-arima <- auto.arima(IC_COV_new$I)
+arima <- auto.arima(IC_COV$I)
 # autoplot(forecast(arima)) 
 # checkresiduals(arima)
-pred$IC_COV_new_I_arima <- summary(forecast(arima, h = length(pred$time)))[[1]]
-pred$IC_COV_new_I_arima_lo <- summary(forecast(arima, h = length(pred$time)))[[4]]
-pred$IC_COV_new_I_arima_up <- summary(forecast(arima, h = length(pred$time)))[[5]]
+pred$IC_COV_I_arima <- summary(forecast(arima, h = length(pred$time)))[[1]]
+pred$IC_COV_I_arima_lo <- summary(forecast(arima, h = length(pred$time)))[[4]]
+pred$IC_COV_I_arima_up <- summary(forecast(arima, h = length(pred$time)))[[5]]
 
 # fit
-plot(I ~ dag, xlim = c(0, length(dag) + 7), data = IC_COV_new)
+plot(I ~ dag, xlim = c(0, length(dag) + 7), data = IC_COV)
 lines(loess$x, loess$fitted, col = "red")
-lines(pred$time, pred$IC_COV_new_I_loess, col = "red", lty= 3)
+lines(pred$time, pred$IC_COV_I_loess, col = "red", lty= 3)
 lines(loess$x, arima$fitted, col = "blue")
-lines(pred$time, pred$IC_COV_new_I_arima, col = "blue", lty= 3)
+lines(pred$time, pred$IC_COV_I_arima, col = "blue", lty= 3)
 
 ###  Positief ### 
 pred$time = seq(length(COV$dag) + 1, length.out = 7)
@@ -163,28 +165,28 @@ pred <- pred[ , -1] #clean pred dataframe (time differs per outcome)
 png("Figures/ICopnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(IC$I ~ IC$dag, ylim = c(floor(min(IC$I)/10) * 10, ceiling(max(IC$I)/10) * 10), 
+plot(IC$I ~ IC$dag, ylim = c(0, ceiling(max(IC$I)/10) * 10), 
      xlim = c(0, length(IC$dag)), ylab = "", xlab = "Datum", xaxt = "n", yaxt = "n", 
-     pch = 16, cex = 0.6, main = "Totaal - IC opnames - verschil dag ervoor")
+     pch = 16, cex = 0.6, main = "Totaal IC opnames - incidentie")
 axis(side = 1, at = seq(1, length(IC$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(floor(min(IC$I)/10) * 10, ceiling(max(IC$I)/10) * 10, 25)
+tick_o <- seq(0, ceiling(max(IC$I)/10) * 10, 25)
 axis(side = 2, at = tick_o)
 abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(IC$dag) + 9)/7), lty = 3)
 
 dev.off()
 
-# IC COVID-19 NEW
+# IC COVID-19
 # Figuur - NL
-png("Figures/ICopnames_COVnew_NL.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/ICopnames_COV_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(IC_COV_new$I ~ IC_COV_new$dag, ylim = c(0, ceiling(max(IC_COV_new$I)/10) * 10), 
-     xlim = c(0, length(IC_COV_new$dag)), ylab = "", xlab = "Datum", xaxt = "n", yaxt = "n", 
-     pch = 16, cex = 0.6, main = "COVID-19 - nieuwe IC opnames")
-axis(side = 1, at = seq(1, length(IC_COV_new$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(0, ceiling(max(IC_COV_new$I)/10) * 10, 25)
+plot(IC_COV$I ~ IC_COV$dag, ylim = c(0, ceiling(max(IC_COV$I)/10) * 10), 
+     xlim = c(0, length(IC_COV$dag)), ylab = "", xlab = "Datum", xaxt = "n", yaxt = "n", 
+     pch = 16, cex = 0.6, main = "COVID-19 IC opnames - incidentie")
+axis(side = 1, at = seq(1, length(IC_COV$dag) + 2, 14), labels = lbls, tick = FALSE)
+tick_o <- seq(0, ceiling(max(IC_COV$I)/10) * 10, 25)
 axis(side = 2, at = tick_o)
-abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(IC_COV_new$dag) + 9)/7), lty = 3)
+abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(IC_COV$dag) + 9)/7), lty = 3)
 
 dev.off()
 
@@ -221,10 +223,10 @@ dev.off()
 png("Figures/Opnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Hosp$I ~ Hosp$dag, ylim = c(floor(min(Hosp$I)/50) * 50, ceiling(max(Hosp$I)/50) * 50), xlim = c(1, length(Hosp$dag)), ylab = "", 
+plot(Hosp$I ~ Hosp$dag, ylim = c(0, ceiling(max(Hosp$I)/50) * 50), xlim = c(1, length(Hosp$dag)), ylab = "", 
      xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, cex = 0.6, main = "COVID-19 ziekenhuisopnames - incidentie")
 axis(side = 1, at = seq(1, length(Hosp$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(floor(min(Hosp$I)/50) * 50, ceiling(max(Hosp$I)/50) * 50, 50)
+tick_o <- seq(0, ceiling(max(Hosp$I)/50) * 50, 50)
 axis(side = 2, at = tick_o)
 abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(Hosp$dag) + 9)/7), lty = 3)
 
@@ -234,10 +236,10 @@ dev.off()
 png("Figures/Opnames_limb.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Hosp$I_limb ~ Hosp$dag, ylim = c(floor(min(Hosp$I_limb)/25) * 25, ceiling(max(Hosp$I_limb)/25) * 25), xlim = c(1, length(Hosp$dag)), ylab = "", 
+plot(Hosp$I_limb ~ Hosp$dag, ylim = c(0, ceiling(max(Hosp$I_limb)/25) * 25), xlim = c(1, length(Hosp$dag)), ylab = "", 
      xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, cex = 0.6, main = "COVID-19 ziekenhuisopnames Limburg - incidentie")
 axis(side = 1, at = seq(1, length(Hosp$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(floor(min(Hosp$I_limb)/25) * 25, ceiling(max(Hosp$I_limb)/25) * 25, 25)
+tick_o <- seq(0, ceiling(max(Hosp$I_limb)/25) * 25, 25)
 axis(side = 2, at = tick_o)
 abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(Hosp$dag) + 9)/7), lty = 3)
 
