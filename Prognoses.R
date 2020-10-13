@@ -64,42 +64,77 @@ Death <- data.frame(C = Death$Deceased,
 rm(COV_limb, Hosp_limb, Death_limb) #clean workspace
 
 ###### TRENDLIJN ######
-pred <- data.frame(time = 1:7)
+pred <- data.frame(time = seq(length(IC$dag) + 1, length.out = 7))
 
-### loess ### IC
-pred$IC_I_loess <- predict(loess(I ~ dag, IC, control = loess.control(surface = "direct")), 
-                           data.frame(dag = seq(length(IC$dag) + 1, length.out = 7)), se = TRUE)[[1]]
-pred$IC_I_loess_se <- predict(loess(I ~ dag, IC, control = loess.control(surface = "direct")), 
-                              data.frame(dag = seq(length(IC$dag) + 1, length.out = 7)), se = TRUE)[[2]]
+### IC ###
+# loess
+loess <- loess(I ~ dag, IC, control = loess.control(surface = "direct"), span = 0.25)
+pred$IC_I_loess <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[1]]
+pred$IC_I_loess_se <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[2]]
 
-# Positief
-pred$COV_I_loess <- predict(loess(I ~ dag, COV, control = loess.control(surface = "direct")), 
-                            data.frame(dag = seq(length(COV$dag) + 1, length.out = 7)), se = TRUE)[[1]]
-pred$COV_I_loess_se <- predict(loess(I ~ dag, COV, control = loess.control(surface = "direct")), 
-                               data.frame(dag = seq(length(COV$dag) + 1, length.out = 7)), se = TRUE)[[2]]
-
-# Ziekenhuisopnames
-pred$Hosp_I_loess <- predict(loess(I ~ dag, Hosp, control = loess.control(surface = "direct")), 
-                             data.frame(dag = seq(length(Hosp$dag) + 1, length.out = 7)), se = TRUE)[[1]]
-pred$Hosp_I_loess_se <- predict(loess(I ~ dag, Hosp, control = loess.control(surface = "direct")), 
-                                data.frame(dag = seq(length(Hosp$dag) + 1, length.out = 7)), se = TRUE)[[2]]
-
-### arima ### IC
+# arima
 arima <- auto.arima(IC$I)
-# autoplot(forecast(arima)) checkresiduals(arima)
-pred$IC_I <- summary(forecast(arima, h = 7))
+# autoplot(forecast(arima)) 
+# checkresiduals(arima)
+pred$IC_I_arima <- summary(forecast(arima, h = length(pred$time)))[[1]]
+pred$IC_I_arima_lo <- summary(forecast(arima, h = length(pred$time)))[[4]]
+pred$IC_I_arima_up <- summary(forecast(arima, h = length(pred$time)))[[5]]
 
-# Positief
+# fit
+plot(I ~ dag, xlim = c(0, length(dag) + 7), data = IC)
+lines(loess$x, loess$fitted, col = "red")
+lines(pred$time, pred$IC_I_loess, col = "red", lty= 3)
+lines(loess$x, arima$fitted, col = "blue")
+lines(pred$time, pred$IC_I_arima, col = "blue", lty= 3)
+
+###  Positief ### 
+pred$time = seq(length(COV$dag) + 1, length.out = 7)
+
+# loess
+loess <- loess(I ~ dag, COV, control = loess.control(surface = "direct"), span = 0.25)
+pred$COV_I_loess <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[1]]
+pred$COV_I_loess_se <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[2]]
+
+# arima
 arima <- auto.arima(COV$I)
-# autoplot(forecast(arima)) checkresiduals(arima)
-pred$COV_I <- summary(forecast(arima, h = 7))
+# autoplot(forecast(arima)) 
+# checkresiduals(arima)
+pred$COV_I_arima <- summary(forecast(arima, h = length(pred$time)))[[1]]
+pred$COV_I_arima_lo <- summary(forecast(arima, h = length(pred$time)))[[4]]
+pred$COV_I_arima_up <- summary(forecast(arima, h = length(pred$time)))[[5]]
 
-# Ziekenhuisopnames
+# fit
+plot(I ~ dag, xlim = c(0, length(dag) + 7), ylim = c(0, 8000), data = COV)
+lines(loess$x, loess$fitted, col = "red")
+lines(pred$time, pred$COV_I_loess, col = "red", lty= 3)
+lines(loess$x, arima$fitted, col = "blue")
+lines(pred$time, pred$COV_I_arima, col = "blue", lty= 3)
+
+### Ziekenhuisopnames ### 
+pred$time = seq(length(Hosp$dag) + 1, length.out = 7)
+
+# loess
+loess <- loess(I ~ dag, Hosp, control = loess.control(surface = "direct"), span = 0.25)
+pred$Hosp_I_loess <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[1]]
+pred$Hosp_I_loess_se <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[2]]
+
+# arima
 arima <- auto.arima(Hosp$I)
-# autoplot(forecast(arima)) checkresiduals(arima)
-pred$Hosp_I <- summary(forecast(arima, h = 7))
+# autoplot(forecast(arima)) 
+# checkresiduals(arima)
+pred$Hosp_I_arima <- summary(forecast(arima, h = length(pred$time)))[[1]]
+pred$Hosp_I_arima_lo <- summary(forecast(arima, h = length(pred$time)))[[4]]
+pred$Hosp_I_arima_up <- summary(forecast(arima, h = length(pred$time)))[[5]]
 
-rm(arima)
+# fit
+plot(I ~ dag, xlim = c(0, length(dag) + 7), data = Hosp)
+lines(loess$x, loess$fitted, col = "red")
+lines(pred$time, pred$Hosp_I_loess, col = "red", lty= 3)
+lines(loess$x, arima$fitted, col = "blue")
+lines(pred$time, pred$Hosp_I_arima, col = "blue", lty= 3)
+
+rm(arima, loess) #clean workspace
+pred <- pred[ , -1] #clean pred dataframe (time differs per outcome)
 
 ###### IC COVID-19 #####
 # Figuur - NL
@@ -149,10 +184,10 @@ dev.off()
 png("Figures/Opnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Hosp$I ~ Hosp$dag, ylim = c(floor(min(Hosp$I)/25) * 25, 150), xlim = c(1, length(Hosp$dag)), ylab = "", 
+plot(Hosp$I ~ Hosp$dag, ylim = c(floor(min(Hosp$I)/50) * 50, ceiling(max(Hosp$I)/50) * 50), xlim = c(1, length(Hosp$dag)), ylab = "", 
      xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, cex = 0.6, main = "COVID-19 ziekenhuisopnames - incidentie")
 axis(side = 1, at = seq(1, length(Hosp$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(floor(min(Hosp$I)/25) * 25, ceiling(max(Hosp$I)/25) * 25, 25)
+tick_o <- seq(floor(min(Hosp$I)/50) * 50, ceiling(max(Hosp$I)/50) * 50, 50)
 axis(side = 2, at = tick_o)
 abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(Hosp$dag) + 9)/7), lty = 3)
 
@@ -162,10 +197,10 @@ dev.off()
 png("Figures/Opnames_limb.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Hosp$I_limb ~ Hosp$dag, ylim = c(floor(min(Hosp$I_limb)/10) * 10, 90), xlim = c(1, length(Hosp$dag)), ylab = "", 
+plot(Hosp$I_limb ~ Hosp$dag, ylim = c(floor(min(Hosp$I_limb)/25) * 25, ceiling(max(Hosp$I_limb)/25) * 25), xlim = c(1, length(Hosp$dag)), ylab = "", 
      xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, cex = 0.6, main = "COVID-19 ziekenhuisopnames Limburg - incidentie")
 axis(side = 1, at = seq(1, length(Hosp$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(floor(min(Hosp$I_limb)/10) * 10, ceiling(max(Hosp$I_limb)/10) * 10, 10)
+tick_o <- seq(floor(min(Hosp$I_limb)/25) * 25, ceiling(max(Hosp$I_limb)/25) * 25, 25)
 axis(side = 2, at = tick_o)
 abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(Hosp$dag) + 9)/7), lty = 3)
 
