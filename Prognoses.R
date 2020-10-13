@@ -86,13 +86,14 @@ pred$Hosp_I_loess_se <- predict(loess(I ~ dag, Hosp, control = loess.control(sur
 
 ### arima ### IC
 arima <- auto.arima(IC$I)
-# autoplot(forecast(arima)) checkresiduals(arima)
+ autoplot(forecast(arima)) checkresiduals(arima)
 pred$IC_I <- summary(forecast(arima, h = 7))
 
 # Positief
 arima <- auto.arima(COV$I)
-# autoplot(forecast(arima)) checkresiduals(arima)
-pred$COV_I <- summary(forecast(arima, h = 7))
+ autoplot(forecast(arima))
+ checkresiduals(arima)
+pred$COV_IA <- summary(forecast(arima, h = 7))
 
 # Ziekenhuisopnames
 arima <- auto.arima(Hosp$I)
