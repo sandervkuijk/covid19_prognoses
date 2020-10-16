@@ -213,6 +213,21 @@ abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(COV$dag) + 9)/
 
 dev.off()
 
+# Figuur - Incidentie NL per 100.000
+
+png("Figures/Incidentie_NL_relative.png", width = 1000, height = 600, pointsize = 18)
+par(mar = c(5.1, 4.1, 4.1, 1.1))
+
+plot(COV$I_rel[7:length(COV$I_rel)] ~ COV$dag[7:length((COV$dag))], ylim = c(0, ceiling(max(COV$I_rel[7:length(COV$I_rel)])/100) * 100), xlim = c(7, length(COV$dag)), 
+     ylab = "", xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, cex = 0.6, main = "COVID-19 - incidentie per 100.000")
+axis(side = 1, at = seq(1, length(COV$dag) + 2, 14), labels = lbls, tick = FALSE)
+tick_o <- seq(0, ceiling(max(COV$I_rel[7:length(COV$I_rel)])/100) * 100, 50)
+axis(side = 2, at = tick_o)
+abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(COV$dag) + 9)/7), lty = 3)
+abline(h=c(250,150,50), col=c("indianred4", "indianred3","indianred2"), lwd=3)
+dev.off()
+
+
 # Figuur - Limburg
 png("Figures/Incidentie_limb.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
