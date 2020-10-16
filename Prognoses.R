@@ -11,7 +11,7 @@ lbls <- format(seq(as.Date("2020-3-13"), Sys.Date() + 2, by = "2 week"), "%e\n%b
 ###### RETRIEVE AND MANIPULATE DATA ######
 dat_NICE <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-ic/data-nice/NICE_IC_wide_latest.csv?raw=true") # https://stichting-nice.nl/ & https://github.com/J535D165/CoronaWatchNL
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
-
+dat_CBS <- fread("https://opendata.cbs.nl/CsvDownload/csv/83474NED/UntypedDataSet?dl=41CFE")
 # Data manipulation
 IC <- dat_NICE$CumulatiefOpnamen # Total number of IC intakes since the start of the outbreak
 IC_COV <- dat_NICE$ToenameOpnamen # Number of newly confirmed or suspected COVID-19 IC intakes 
