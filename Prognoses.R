@@ -50,6 +50,10 @@ COV <- data.frame(C = COV$Total_reported,
                   C_limb = COV_limb$Total_reported,
                   I_limb = COV_limb$Total_reported - shift(COV_limb$Total_reported, n=1, fill=0, type="lag")
 )
+COV$Iweek <- rollsumr(COV$I, k = 7, fill = NA)
+COV$Iweek
+COV$I_rel <- COV$Iweek/tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1)*100000
+COV$I_rel
 
 Hosp <- data.frame(C = Hosp$Hospital_admission,
                    I = Hosp$Hospital_admission - shift(Hosp$Hospital_admission, n=1, fill=0, type="lag"),
