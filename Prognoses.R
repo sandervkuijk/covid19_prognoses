@@ -12,9 +12,11 @@ lbls <- format(seq(date_start, Sys.Date() + 2, by = "2 week"), "%e\n%b")
 
 ###### RETRIEVE AND MANIPULATE DATA ######
 dat_NICE <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-ic/data-nice/NICE_IC_wide_latest.csv?raw=true") 
-dat_CBS <- fread("https://opendata.cbs.nl/CsvDownload/csv/83474NED/UntypedDataSet?dl=41CFE")
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
 dat_RIVM_test <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-misc/data-test/RIVM_NL_test_latest.csv?raw=true")
+dat_RIVM_R <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-reproduction/RIVM_NL_reproduction_index.csv?raw=true")
+dat_CBS <- fread("https://opendata.cbs.nl/CsvDownload/csv/83474NED/UntypedDataSet?dl=41CFE")
+dat_CBS_prov <- fread("https://opendata.cbs.nl/CsvDownload/csv/37230ned/UntypedDataSet?dl=433DC")
 
 # Data partly from:
 # De Bruin, J. (2020). Novel Coronavirus (COVID-19) Cases in The Netherlands
@@ -33,16 +35,18 @@ Death <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, data = dat_RI
 Death_limb <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, 
                         data = subset(dat_RIVM, Province == "Limburg"))
 dat_RIVM_test$Type <- as.factor(dat_RIVM_test$Type)
+dat_RIVM_R$Type <- as.factor(dat_RIVM_R$Type)
+dat_CBS_prov$`Bevolking aan het einde van de periode (aantal)` <- as.numeric(dat_CBS_prov$`Bevolking aan het einde van de periode (aantal)`) 
 
 # Create dataframes 
 # I = incidentie, C = cumulatieve incidentie
 IC <- data.frame(C = IC,
-                 I = IC - shift(IC, n=1, fill=0, type="lag"),
+                 I = pmax(IC - shift(IC, n=1, fill=0, type="lag"), 0),
                  I_COV = IC_COV,
                  date = as.Date(dat_NICE$Datum)
 )
 IC <- subset(IC, IC$date >= date_start) # Select data from start date 
-IC <- IC[1:(dim(IC)[1] - 1),] # Remove last row (as these are still being updated)
+IC <- subset(IC, IC$date <= Sys.Date()) # Remove todays data (as these are still being updated)
 IC$dag <- 1:dim(IC)[1]
 
 COV <- data.frame(C = COV$Total_reported,
@@ -52,9 +56,11 @@ COV <- data.frame(C = COV$Total_reported,
                   date = as.Date(COV$Date_of_report)
 )
 COV$Iweek <- rollsumr(COV$I, k = 7, fill = NA)
-COV$I_rel <- COV$Iweek/tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1)*100000
-COV <- subset(COV, COV$date >= date_start)
-COV <- COV[1:(dim(COV)[1] - 1),] # Remove last row (as these are still being updated)
+COV$Iweek_limb <- rollsumr(COV$I_limb, k = 7, fill = NA)
+COV$I_rel <- COV$Iweek/tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1) * 100000
+COV$I_rel_limb <- COV$Iweek_limb/tail(dat_CBS_prov[dat_CBS_prov$`Regio's` == "Limburg (PV)"]$'Bevolking aan het einde van de periode (aantal)', n=1) * 100000
+COV <- subset(COV, COV$date >= date_start) # Select data from start date 
+COV <- subset(COV, COV$date <= Sys.Date()) # Remove todays data (as these are still being updated)
 COV$dag <- 1:dim(COV)[1]
 
 COV_test <- data.frame(I_pos = dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM_test$Type)[1], ]$Aantal,
@@ -63,8 +69,15 @@ COV_test <- data.frame(I_pos = dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM
                        date = as.Date(dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM_test$Type)[1], ]$EindDatum) - 4, #minus 4 so it is mid week
                        week = dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM_test$Type)[1], ]$Week
 ) # Separate dataframe as unit is week (not day as in COV)
-COV_test$I_pos_rel <- COV_test$I_pos/tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1)*100000
+COV_test$I_pos_rel <- COV_test$I_pos/tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1) * 100000
 COV_test <- subset(COV_test, COV_test$date >= date_start)
+
+R0 <- data.frame(R = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[3], ]$Waarde,
+                 Rmin = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[2], ]$Waarde,
+                 Rmax = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[1], ]$Waarde,
+                 date = as.Date(dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[3], ]$Datum)
+) # Separate dataframe due to difference in dates 
+R0 <- subset(R0, R0$date >= date_start)
 
 Hosp <- data.frame(C = Hosp$Hospital_admission,
                    I = pmax(Hosp$Hospital_admission - shift(Hosp$Hospital_admission, n=1, fill=0, type="lag"), 0),
@@ -72,18 +85,18 @@ Hosp <- data.frame(C = Hosp$Hospital_admission,
                    I_limb = pmax(Hosp_limb$Hospital_admission - shift(Hosp_limb$Hospital_admission, n=1, fill=0, type="lag"), 0),
                    date = as.Date(Hosp$Date_of_report)
 )
-Hosp <- subset(Hosp, Hosp$date >= date_start)
-Hosp <- Hosp[1:(dim(Hosp)[1] - 1),] # Remove last row (as these are still being updated)
+Hosp <- subset(Hosp, Hosp$date >= date_start) # Select data from start date 
+Hosp <- subset(Hosp, Hosp$date <= Sys.Date()) # Remove todays data (as these are still being updated)
 Hosp$dag <- 1:dim(Hosp)[1]
 
 Death <- data.frame(C = Death$Deceased,
-                    I = Death$Deceased - shift(Death$Deceased, n=1, fill=0, type="lag"),
+                    I = pmax(Death$Deceased - shift(Death$Deceased, n=1, fill=0, type="lag"), 0),
                     C_limb = Death_limb$Deceased,
-                    I_limb = Death_limb$Deceased - shift(Death_limb$Deceased, n=1, fill=0, type="lag"),
+                    I_limb = pmax(Death_limb$Deceased - shift(Death_limb$Deceased, n=1, fill=0, type="lag"), 0),
                     date = as.Date(Death$Date_of_report)
 )
-Death <- subset(Death, Death$date >= date_start)
-Death <- Death[1:(dim(Death)[1] - 1),] # Remove last row (as these are still being updated)
+Death <- subset(Death, Death$date >= date_start) # Select data from start date 
+Death <- subset(Death, Death$date <= Sys.Date()) # Remove todays data (as these are still being updated)
 Death$dag <- 1:dim(Death)[1]
 
 rm(IC_COV, COV_limb, Hosp_limb, Death_limb) #clean workspace
@@ -240,12 +253,13 @@ abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 7, by = "1 month")), l
 dev.off()
 
 # Figuur - Incidentie NL per 100.000 per week
-png("Figures/Incidentie_NL_relative.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/Incidentie_NL_per100000.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV$I_rel ~ COV$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(min(COV$date), max(COV$date)),
-     main = "COVID-19 - incidentie per 100.000", type = "l")
-lines(COV_test$I_pos_rel ~ COV_test$date, type = "l", lty = 2)
+     main = "COVID-19 - incidentie per 100.000", type = "l", lty = 2)
+lines(COV_test$I_pos_rel ~ COV_test$date, type = "l", lty = 1)
+lines(COV$I_rel_limb ~ COV$date, type = "l", lty = "9414")
 polygon(c(min(COV$date) - 7, max(COV$date) + 7, max(COV$date) + 7, 
           min(COV$date) - 7), c(50, 50, 150, 150), 
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
@@ -257,8 +271,10 @@ polygon(c(min(COV$date) - 7, max(COV$date) + 7, max(COV$date) + 7,
         col = adjustcolor("red", alpha.f = 0.3), border = NA)
 abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 7, by = "1 month")), lty = 3)
 abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 7, by = "1 month")), lty = 3)
-legend("topleft", inset = 0.05, col=c(1, 1), lty=1:2, cex=0.6, box.lty=0, 
-       legend=c("COVID-19 aantallen\n(per week per 100.000)\n ", "Aantal COVID-19 positieve testen\n(per week per 100.000)\n "))
+legend("topleft", inset = 0.05, col=c(1, 1, 1), lty=c("solid", "dashed", "9414"), cex=0.6, box.lty=0, 
+       legend=c("COVID-19 aantal positieve testen\n(incidentie per week per 100.000)\n ", 
+                "COVID-19 aantal patiënten\n(incidentie per week per 100.000)\n ", 
+                "COVID-19 aantal patiënten Limburg\n(incidentie per week per 100.000)\n "))
   
 dev.off()
 
@@ -279,19 +295,26 @@ abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 7, by = "1 month")), l
 
 dev.off()
 
-# Figuur - Limburg
-png("Figures/Incidentie_limb.png", width = 1000, height = 600, pointsize = 18)
+# Figuur - Reproductie index NL
+png("Figures/R0_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV$I_limb ~ COV$dag, ylim = c(0, ceiling(max(COV$I_limb)/100) * 100), 
-     xlim = c(1, length(COV$dag)), ylab = "", xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, 
-     cex = 0.6, main = "COVID-19 in Limburg - incidentie")
-axis(side = 1, at = seq(1, length(COV$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(0, ceiling(max(COV$I_limb)/100) * 100, 50)
-axis(side = 2, at = tick_o)
-abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(COV$dag) + 9)/7), lty = 3)
+plot(R0$R ~ R0$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(min(R0$date), max(R0$date)),
+     ylim = c(0, max(R0$Rmax)), main = "COVID-19 - Reproductie index",  type = "l")
+polygon(c(R0$date, rev(R0$date)), 
+        c(R0$Rmin, rev(R0$Rmax)), 
+        col = adjustcolor("black", alpha.f = 0.3), border = NA)
+polygon(c(min(R0$date) - 7, max(R0$date) + 7, max(R0$date) + 7, # circa 1.0 aangenomen als 0.98 - 1.02
+          min(R0$date) - 7), c(0.98, 0.98, 1.02, 1.02), 
+        col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
+polygon(c(min(R0$date) - 7, max(R0$date) + 7, max(R0$date) + 7, 
+          min(R0$date) - 7), c(1.02, 1.02, 100, 100), 
+        col = adjustcolor("red", alpha.f = 0.3), border = NA)
+abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 7, by = "1 month")), lty = 3)
+abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 7, by = "1 month")), lty = 3)
 
 dev.off()
+
 
 ###### Ziekenhuisopnames COVID-19 #####
 # Figuur - NL
