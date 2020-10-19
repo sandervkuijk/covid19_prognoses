@@ -55,8 +55,8 @@ IC <- data.frame(C = IC,
                  date = as.Date(dat_NICE$Datum)
 )
 IC <- subset(IC, IC$date >= date_start) # Select data from start date 
-IC <- subset(IC, IC$date <= Sys.Date()) # Remove todays data (as these are still being updated)
-IC$dag <- 1:dim(IC)[1]
+IC <- subset(IC, IC$date <= (Sys.Date()-2)) # Remove todays data (as these are still being updated)
+IC$dag <- 1:dim(IC)[1]0
 
 COV <- data.frame(C = COV$Total_reported,
                   I = pmax(COV$Total_reported - shift(COV$Total_reported, n=1, fill=0, type="lag"), 0),
@@ -258,13 +258,19 @@ dev.off()
 png("Figures/ICopnames_COV_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(IC$I_COV ~ IC$dag, ylim = c(0, ceiling(max(IC$I_COV)/10) * 10), 
-     xlim = c(0, length(IC$dag)), ylab = "", xlab = "Datum", xaxt = "n", yaxt = "n", 
-     pch = 16, cex = 0.6, main = "COVID-19 IC opnames - incidentie")
-axis(side = 1, at = seq(1, length(IC$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(0, ceiling(max(IC$I_COV)/10) * 10, 25)
-axis(side = 2, at = tick_o)
-abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(IC$dag) + 9)/7), lty = 3)
+plot(IC$I_COV ~ IC$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+     main = "COVID-19 IC opnames - incidentie", type = "l", lty = 1)
+lines(IC$I ~ IC$date, type = "l", lty = 2)
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(0, 0, 10, 10), 
+        col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(10, 10, 20, 20), 
+        col = adjustcolor("orange", alpha.f = 0.3), border = NA)
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(20, 20, 10000, 10000), 
+        col = adjustcolor("red", alpha.f = 0.3), border = NA)
+#abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(IC$dag) + 9)/7), lty = 3)
 
 dev.off()
 
