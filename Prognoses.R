@@ -19,10 +19,17 @@ dat_RIVM_nursery <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master
 dat_CBS <- fread("https://opendata.cbs.nl/CsvDownload/csv/83474NED/UntypedDataSet?dl=41CFE")
 dat_CBS_prov <- fread("https://opendata.cbs.nl/CsvDownload/csv/37230ned/UntypedDataSet?dl=433DC")
 dat_OWiD <- fread("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv?raw=true") #https://github.com/owid/covid-19-data/tree/master/public/data
+# OWiD codebook: https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-codebook.csv
 
 # Data partly from:
 # De Bruin, J. (2020). Novel Coronavirus (COVID-19) Cases in The Netherlands
 # [Data set]. Zenodo. http://doi.org/10.5281/zenodo.4068121
+#
+# AND
+#
+# Hasell, J., Mathieu, E., Beltekian, D. et al. A cross-country database of COVID-19 testing. 
+# Sci Data 7, 345 (2020). https://doi.org/10.1038/s41597-020-00688-8
+
 
 # Data manipulation
 IC <- dat_NICE$CumulatiefOpnamen # Total number of IC intakes since the start of the outbreak
@@ -41,7 +48,7 @@ dat_RIVM_R$Type <- as.factor(dat_RIVM_R$Type)
 dat_CBS_prov$`Bevolking aan het einde van de periode (aantal)` <- as.numeric(dat_CBS_prov$`Bevolking aan het einde van de periode (aantal)`) 
 
 # Create dataframes 
-# I = incidentie, C = cumulatieve incidentie, A = huidig aantal
+# I = incidentie, C = cumulatieve incidentie, A = huidig aantal, _rel = per 100,000
 IC <- data.frame(C = IC,
                  I = pmax(IC - shift(IC, n=1, fill=0, type="lag"), 0),
                  I_COV = IC_COV,
@@ -108,6 +115,26 @@ Death <- data.frame(C = Death$Deceased,
 Death <- subset(Death, Death$date >= date_start) # Select data from start date 
 Death <- subset(Death, Death$date <= Sys.Date()) # Remove todays data (as these are still being updated)
 Death$dag <- 1:dim(Death)[1]
+
+Int <- data.frame(continent = as.factor(dat_OWiD$continent),
+                  iso = as.factor(dat_OWiD$iso_code),
+                  country = as.factor(dat_OWiD$location),
+                  population = dat_OWiD$population,
+                  I_COV = dat_OWiD$population * dat_OWiD$new_cases_per_million/1000000,
+                  I_COV_smooth = dat_OWiD$population * dat_OWiD$new_cases_smoothed_per_million/1000000,
+                  I_COV_rel = dat_OWiD$new_cases_per_million/10,
+                  I_COV_rel_smooth = dat_OWiD$new_cases_smoothed_per_million/10,
+                  I_test_pos_rel = dat_OWiD$new_tests_per_thousand * dat_OWiD$positive_rate * 100,
+                  prop_test_pos = dat_OWiD$positive_rate, 
+                  GDP = dat_OWiD$gdp_per_capita,
+                  LE = dat_OWiD$life_expectancy,
+                  date = as.Date(dat_OWiD$date)
+)
+Int <- subset(Int, Int$date >= date_start) # Select data from start date 
+Int <- subset(Int, Int$date <= Sys.Date()) # Remove todays data (as these are still being updated)
+Int <- subset(Int, Int$continent == "Europe") # Select Europe
+Int <- subset(Int, Int$LE >= 80) # Select countries with life expectancy above or equal to 80 
+Int <- droplevels(Int)
 
 rm(IC_COV, COV_limb, Hosp_limb, Death_limb) #clean workspace
 
