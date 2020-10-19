@@ -15,8 +15,10 @@ dat_NICE <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-ic
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
 dat_RIVM_test <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-misc/data-test/RIVM_NL_test_latest.csv?raw=true")
 dat_RIVM_R <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-reproduction/RIVM_NL_reproduction_index.csv?raw=true")
+dat_RIVM_nursery <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-nursery/data-nursery_homes/RIVM_NL_nursery_counts.csv?raw=true")
 dat_CBS <- fread("https://opendata.cbs.nl/CsvDownload/csv/83474NED/UntypedDataSet?dl=41CFE")
 dat_CBS_prov <- fread("https://opendata.cbs.nl/CsvDownload/csv/37230ned/UntypedDataSet?dl=433DC")
+dat_OWiD <- fread("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv?raw=true") #https://github.com/owid/covid-19-data/tree/master/public/data
 
 # Data partly from:
 # De Bruin, J. (2020). Novel Coronavirus (COVID-19) Cases in The Netherlands
@@ -39,7 +41,7 @@ dat_RIVM_R$Type <- as.factor(dat_RIVM_R$Type)
 dat_CBS_prov$`Bevolking aan het einde van de periode (aantal)` <- as.numeric(dat_CBS_prov$`Bevolking aan het einde van de periode (aantal)`) 
 
 # Create dataframes 
-# I = incidentie, C = cumulatieve incidentie
+# I = incidentie, C = cumulatieve incidentie, A = huidig aantal
 IC <- data.frame(C = IC,
                  I = pmax(IC - shift(IC, n=1, fill=0, type="lag"), 0),
                  I_COV = IC_COV,
@@ -88,6 +90,14 @@ Hosp <- data.frame(C = Hosp$Hospital_admission,
 Hosp <- subset(Hosp, Hosp$date >= date_start) # Select data from start date 
 Hosp <- subset(Hosp, Hosp$date <= Sys.Date()) # Remove todays data (as these are still being updated)
 Hosp$dag <- 1:dim(Hosp)[1]
+
+Nurs <- data.frame(A = dat_RIVM_nursery$Aantal,
+                   I = dat_RIVM_nursery$NieuwAantal,
+                   date = as.Date(dat_RIVM_nursery$Datum)
+)
+Nurs <- subset(Nurs, Nurs$date >= date_start) # Select data from start date 
+Nurs <- subset(Nurs, Nurs$date <= Sys.Date()) # Remove todays data (as these are still being updated)
+Nurs$dag <- 1:dim(Nurs)[1]
 
 Death <- data.frame(C = Death$Deceased,
                     I = pmax(Death$Deceased - shift(Death$Deceased, n=1, fill=0, type="lag"), 0),
@@ -197,6 +207,9 @@ lines(pred$time, pred$Hosp_I_arima, col = "blue", lty= 3)
 rm(arima, loess) #clean workspace
 pred <- pred[ , -1] #clean pred dataframe (time differs per outcome)
 
+###### FIGUREN ###### 
+# singaalwaardes obv https://www.rijksoverheid.nl/documenten/publicaties/2020/10/13/risiconiveaus-en-maatregelen-covid-19
+
 ###### IC COVID-19 #####
 # IC TOTAL
 # Figuur - NL
@@ -233,22 +246,24 @@ dev.off()
 png("Figures/Incidentie_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV$I ~ COV$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(min(COV$date), max(COV$date)),
+plot(COV$I ~ COV$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
      main = "COVID-19 - incidentie")
 factor <- 1 / 7 / (100000 / tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1)) # NEEDS TO BE CHECKED
-polygon(c(min(COV$date) - 7, max(COV$date) + 7, max(COV$date) + 7, 
-          min(COV$date) - 7), c(50 * factor, 50 * factor, 150 * factor, 150 * factor), 
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(50 * factor, 50 * factor, 150 * factor, 150 * factor), 
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
-polygon(c(min(COV$date) - 7, max(COV$date) + 7, max(COV$date) + 7, 
-          min(COV$date) - 7), c(150 * factor, 150 * factor, 250 * factor, 250 * factor), 
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(150 * factor, 150 * factor, 250 * factor, 250 * factor), 
         col = adjustcolor("orange", alpha.f = 0.3), border = NA)
-polygon(c(min(COV$date) - 7, max(COV$date) + 7, max(COV$date) + 7, 
-          min(COV$date) - 7), c(250 * factor, 250 * factor, 100000 * factor, 100000 * factor), 
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+           date_start - 30), c(250 * factor, 250 * factor, 100000 * factor, 100000 * factor), 
         col = adjustcolor("red", alpha.f = 0.3), border = NA)
-tick_o <- seq(0, ceiling(max(COV$I)/2000) * 2000, 2000)
-abline(h = tick_o, lty = 3)
-abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 7, by = "1 month")), lty = 3)
-abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 7, by = "1 month")), lty = 3)
+abline(h = seq(0, ceiling(max(COV$I, na.rm = TRUE)/2000) * 2000, 2000), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
 
 dev.off()
 
@@ -256,21 +271,25 @@ dev.off()
 png("Figures/Incidentie_NL_per100000.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV$I_rel ~ COV$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(min(COV$date), max(COV$date)),
+plot(COV$I_rel ~ COV$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
      main = "COVID-19 - incidentie per 100.000", type = "l", lty = 2)
 lines(COV_test$I_pos_rel ~ COV_test$date, type = "l", lty = 1)
 lines(COV$I_rel_limb ~ COV$date, type = "l", lty = "9414")
-polygon(c(min(COV$date) - 7, max(COV$date) + 7, max(COV$date) + 7, 
-          min(COV$date) - 7), c(50, 50, 150, 150), 
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(50, 50, 150, 150), 
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
-polygon(c(min(COV$date) - 7, max(COV$date) + 7, max(COV$date) + 7, 
-          min(COV$date) - 7), c(150, 150, 250, 250), 
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(150, 150, 250, 250), 
         col = adjustcolor("orange", alpha.f = 0.3), border = NA)
-polygon(c(min(COV$date) - 7, max(COV$date) + 7, max(COV$date) + 7, 
-          min(COV$date) - 7), c(250, 250, 100000, 100000), 
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(250, 250, 100000, 100000), 
         col = adjustcolor("red", alpha.f = 0.3), border = NA)
-abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 7, by = "1 month")), lty = 3)
-abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 7, by = "1 month")), lty = 3)
+abline(h = seq(0, ceiling(max(COV$I_rel, na.rm = TRUE)/50) * 50, 50), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
 legend("topleft", inset = 0.05, col=c(1, 1, 1), lty=c("solid", "dashed", "9414"), cex=0.6, box.lty=0, 
        legend=c("COVID-19 aantal positieve testen\n(incidentie per week per 100.000)\n ", 
                 "COVID-19 aantal patiënten\n(incidentie per week per 100.000)\n ", 
@@ -282,16 +301,20 @@ dev.off()
 png("Figures/Incidentie_test_NL_relative.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV_test$prop_pos ~ COV_test$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(min(COV_test$date), max(COV_test$date)),
+plot(COV_test$prop_pos ~ COV_test$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
      main = "COVID-19 - proportie positieve testen")
-polygon(c(min(COV_test$date) - 7, max(COV_test$date) + 7, max(COV_test$date) + 7, 
-          min(COV_test$date) - 7), c(0.05, 0.05, 0.1, 0.1), 
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(0.05, 0.05, 0.1, 0.1), 
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
-polygon(c(min(COV_test$date) - 7, max(COV_test$date) + 7, max(COV_test$date) + 7, 
-          min(COV_test$date) - 7), c(0.1, 0.1, 1, 1), 
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(0.1, 0.1, 1, 1), 
         col = adjustcolor("orange", alpha.f = 0.3), border = NA)
-abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 7, by = "1 month")), lty = 3)
-abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 7, by = "1 month")), lty = 3)
+abline(h = seq(0, ceiling(max(COV_test$prop_pos, na.rm = TRUE)/0.05) * 0.05, 0.05), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
 
 dev.off()
 
@@ -299,19 +322,22 @@ dev.off()
 png("Figures/R0_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(R0$R ~ R0$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(min(R0$date), max(R0$date)),
-     ylim = c(0, max(R0$Rmax)), main = "COVID-19 - Reproductie index",  type = "l")
-polygon(c(R0$date, rev(R0$date)), 
-        c(R0$Rmin, rev(R0$Rmax)), 
+plot(R0$R ~ R0$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+     ylim = c(0, 2), main = "COVID-19 - Reproductie index",  type = "l")
+polygon(c(R0$date, rev(R0$date)), c(R0$Rmin, rev(R0$Rmax)), 
         col = adjustcolor("black", alpha.f = 0.3), border = NA)
-polygon(c(min(R0$date) - 7, max(R0$date) + 7, max(R0$date) + 7, # circa 1.0 aangenomen als 0.98 - 1.02
-          min(R0$date) - 7), c(0.98, 0.98, 1.02, 1.02), 
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, # circa 1.0 aangenomen als 0.98 - 1.02
+          date_start - 30), c(0.98, 0.98, 1.02, 1.02), 
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
-polygon(c(min(R0$date) - 7, max(R0$date) + 7, max(R0$date) + 7, 
-          min(R0$date) - 7), c(1.02, 1.02, 100, 100), 
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(1.02, 1.02, 100, 100), 
         col = adjustcolor("red", alpha.f = 0.3), border = NA)
-abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 7, by = "1 month")), lty = 3)
-abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 7, by = "1 month")), lty = 3)
+abline(h = seq(0, ceiling(max(R0$Rmax, na.rm = TRUE)/0.5) * 0.5, 0.5), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
 
 dev.off()
 
@@ -321,53 +347,58 @@ dev.off()
 png("Figures/Opnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Hosp$I ~ Hosp$dag, ylim = c(0, ceiling(max(Hosp$I)/100) * 100), xlim = c(1, length(Hosp$dag)), ylab = "", 
-     xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, cex = 0.6, main = "COVID-19 ziekenhuisopnames - incidentie")
-axis(side = 1, at = seq(1, length(Hosp$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(0, ceiling(max(Hosp$I)/100) * 100, 100)
-axis(side = 2, at = tick_o)
-abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(Hosp$dag) + 9)/7), lty = 3)
+plot(Hosp$I ~ Hosp$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+     ylim = c(0, 150), main = "COVID-19 ziekenhuisopnames - incidentie", type = "l")
+lines(Hosp$I_limb ~ Hosp$date, type = "l", lty = "9414")
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, # circa 1.0 aangenomen als 0.98 - 1.02
+          date_start - 30), c(40, 40, 80, 80), 
+        col = adjustcolor("orange", alpha.f = 0.3), border = NA)
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(80, 80, 1000, 1000), 
+        col = adjustcolor("red", alpha.f = 0.3), border = NA)
+abline(h = seq(0, ceiling(max(Hosp$I, na.rm = TRUE)/50) * 50, 50), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+legend("topleft", inset = 0.05, col=c(1, 1), lty=c("solid", "9414"), cex=0.6, box.lty=0,
+      legend=c("Nationaal", "Limburg"))
 
 dev.off()
 
-# Figuur - Limburg
-png("Figures/Opnames_limb.png", width = 1000, height = 600, pointsize = 18)
+###### Verpleeghuislocaties ######
+# Figuur 
+png("Figures/Verpleeghuislocaties.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Hosp$I_limb ~ Hosp$dag, ylim = c(0, ceiling(max(Hosp$I_limb)/50) * 50), xlim = c(1, length(Hosp$dag)), ylab = "", 
-     xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, cex = 0.6, main = "COVID-19 ziekenhuisopnames Limburg - incidentie")
-axis(side = 1, at = seq(1, length(Hosp$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(0, ceiling(max(Hosp$I_limb)/50) * 50, 50)
-axis(side = 2, at = tick_o)
-abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(Hosp$dag) + 9)/7), lty = 3)
+plot(Nurs$I ~ Nurs$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+     main = "COVID-19 verpleeghuislocaties - aantal met minimaal 1 besmette bewoner")
+abline(h = seq(0, ceiling(max(Nurs$I, na.rm = TRUE)/10) * 10, 10), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
 
 dev.off()
 
 ###### Sterfte ######
-# Figuur - NL
-png("Figures/Sterfte_NL.png", width = 1000, height = 600, pointsize = 18)
+# Figuur
+png("Figures/Sterfte.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Death$I ~ Death$dag, ylim = c(0, ceiling(max(Death$I)/50) * 50), xlim = c(1, length(Death$dag)), 
-     ylab = "", xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, cex = 0.6, main = "COVID-19 sterfte - incidentie")
-axis(side = 1, at = seq(1, length(Death$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(0, ceiling(max(Death$I)/50) * 50, 50)
-axis(side = 2, at = tick_o)
-abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(Death$dag) + 9)/7), lty = 3)
-
-dev.off()
-
-# Figuur - Limburg
-png("Figures/Sterfte_limb.png", width = 1000, height = 600, pointsize = 18)
-par(mar = c(5.1, 4.1, 4.1, 1.1))
-
-plot(Death$I_limb ~ Death$dag, ylim = c(0, ceiling(max(Death$I_limb)/10) * 10), 
-     xlim = c(1, length(Death$dag)), ylab = "", xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, 
-     cex = 0.6, main = "COVID-19 sterfte Limburg - incidentie")
-axis(side = 1, at = seq(1, length(Death$dag) + 2, 14), labels = lbls, tick = FALSE)
-tick_o <- seq(0, ceiling(max(Death$I_limb)/10) * 10, 10)
-axis(side = 2, at = tick_o)
-abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(Death$dag) + 9)/7), lty = 3)
+plot(Death$I ~ Death$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+     main = "COVID-19 sterfte - incidentie", type = "l")
+lines(Death$I_limb ~ Death$date, type = "l", lty = "9414")
+abline(h = seq(0, ceiling(max(Death$I, na.rm = TRUE)/50) * 50, 50), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+legend("topleft", inset = 0.05, col=c(1, 1), lty=c("solid", "9414"), cex=0.6, box.lty=0,
+       legend=c("Nationaal", "Limburg"))
 
 dev.off()
 
