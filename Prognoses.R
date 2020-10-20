@@ -267,6 +267,7 @@ legend("topleft", inset = 0.05, col=c(1, 1), lty=c("solid", "dashed"), cex=0.6, 
 dev.off()
 
 ###### Positief COVID-19 #####
+# Incidentie
 png("Figures/Incidentie_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
@@ -291,7 +292,7 @@ abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), 
 
 dev.off()
 
-# Incidentie NL per 100.000 per week
+# Incidentie per 100.000 per week
 png("Figures/Incidentie_NL_per100000.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
@@ -321,7 +322,7 @@ legend("topleft", inset = 0.05, col=c(1, 1, 1), lty=c("solid", "dashed", "9414")
   
 dev.off()
 
-# Incidentie positieve testen NL per 100.000 per week
+# Percentage positieve testen per 100.000 per week
 png("Figures/Incidentie_test_NL_relative.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
@@ -342,7 +343,7 @@ abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), 
 
 dev.off()
 
-# Reproductie index NL
+# Reproductie index
 png("Figures/R0_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
@@ -422,6 +423,99 @@ abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), 
        col = adjustcolor("grey", alpha.f = 0.7))
 legend("topleft", inset = 0.05, col=c(1, 1), lty=c("solid", "9414"), cex=0.6, box.lty=0,
        legend=c("Nationaal", "Limburg"))
+
+dev.off()
+
+###### Internationaal ######
+# Incidentie
+png("Figures/Incidentie_INT.png", width = 1000, height = 600, pointsize = 18)
+par(mar = c(5.1, 4.1, 4.1, 1.1))
+
+plot(Int[Int$iso == levels(Int$iso)[22], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[22], ]$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+     ylim = c(0, ceiling(max(Int$I_COV, na.rm = TRUE))), main = "COVID-19 incidentie", type = "l")
+lines(Int[Int$iso == levels(Int$iso)[1], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[1], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[2], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[2], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[3], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[3], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[4], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[4], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[5], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[5], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[6], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[6], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[7], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[7], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[8], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[8], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[9], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[9], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[10], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[10], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[11], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[11], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[12], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[12], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[13], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[13], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[14], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[14], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[15], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[15], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[16], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[16], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[17], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[17], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[18], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[18], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[19], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[19], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[20], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[20], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[21], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[21], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[23], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[23], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[24], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[24], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[25], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[25], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[26], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[26], ]$date, type = "l")
+lines(Int[Int$iso == levels(Int$iso)[27], ]$I_COV ~ Int[Int$iso == levels(Int$iso)[27], ]$date, type = "l")
+abline(h = seq(0, ceiling(max(Int$I_COV, na.rm = TRUE)/2000) * 2000, 2000), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+
+dev.off()
+
+# Incidentie per 100.000 per week
+png("Figures/Incidentie_INT_per100000.png", width = 1000, height = 600, pointsize = 18)
+par(mar = c(5.1, 4.1, 4.1, 1.1))
+
+# plot(COV$I_rel ~ COV$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+#      main = "COVID-19 incidentie per 100.000", type = "l", lty = 2)
+# lines(COV_test$I_pos_rel ~ COV_test$date, type = "l", lty = 1)
+# lines(COV$I_rel_limb ~ COV$date, type = "l", lty = "9414")
+# polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+#           date_start - 30), c(50, 50, 150, 150), 
+#         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
+# polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+#           date_start - 30), c(150, 150, 250, 250), 
+#         col = adjustcolor("orange", alpha.f = 0.3), border = NA)
+# polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+#           date_start - 30), c(250, 250, 100000, 100000), 
+#         col = adjustcolor("red", alpha.f = 0.3), border = NA)
+# abline(h = seq(0, ceiling(max(COV$I_rel, na.rm = TRUE)/50) * 50, 50), lty = 3, 
+#        col = adjustcolor("grey", alpha.f = 0.7))
+# abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+#        col = adjustcolor("grey", alpha.f = 0.7))
+# abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+#        col = adjustcolor("grey", alpha.f = 0.7))
+# legend("topleft", inset = 0.05, col=c(1, 1, 1), lty=c("solid", "dashed", "9414"), cex=0.6, box.lty=0, 
+#        legend=c("COVID-19 aantal positieve testen\n(incidentie per week per 100.000)\n ", 
+#                 "COVID-19 aantal patiënten\n(incidentie per week per 100.000)\n ", 
+#                 "COVID-19 aantal patiënten Limburg\n(incidentie per week per 100.000)\n "))
+
+dev.off()
+
+# Percentage positieve testen per 100.000 per week
+png("Figures/Incidentie_test_INT_relative.png", width = 1000, height = 600, pointsize = 18)
+par(mar = c(5.1, 4.1, 4.1, 1.1))
+
+# plot(COV_test$prop_pos ~ COV_test$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+#      main = "COVID-19 percentage positieve testen", type = "l")
+# polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+#           date_start - 30), c(0.05, 0.05, 0.1, 0.1), 
+#         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
+# polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+#           date_start - 30), c(0.1, 0.1, 1, 1), 
+#         col = adjustcolor("orange", alpha.f = 0.3), border = NA)
+# abline(h = seq(0, ceiling(max(COV_test$prop_pos, na.rm = TRUE)/0.02) * 0.02, 0.02), lty = 3, 
+#        col = adjustcolor("grey", alpha.f = 0.7))
+# abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+#        col = adjustcolor("grey", alpha.f = 0.7))
+# abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), lty = 3, 
+#        col = adjustcolor("grey", alpha.f = 0.7))
 
 dev.off()
 
