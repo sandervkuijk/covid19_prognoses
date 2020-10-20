@@ -130,11 +130,16 @@ Int <- data.frame(continent = as.factor(dat_OWiD$continent),
                   LE = dat_OWiD$life_expectancy,
                   date = as.Date(dat_OWiD$date)
 )
-Int <- subset(Int, Int$date >= date_start) # Select data from start date 
-Int <- subset(Int, Int$date <= Sys.Date()) # Remove todays data (as these are still being updated)
 Int <- subset(Int, Int$continent == "Europe") # Select Europe
 Int <- subset(Int, Int$LE >= 80) # Select countries with life expectancy above or equal to 80 
+Int<- subset(Int, Int$population >= 1000000)
+Int <- subset(Int, Int$date >= date_start - 14)
+Int$Iweek <- rollsumr(Int$I_COV, by=Int$country, k = 7, fill = NA)
+Int$Iweek_rel <- Int$Iweek/Int$population * 100000
+Int <- subset(Int, Int$date >= date_start) # Select data from start date 
+Int <- subset(Int, Int$date <= Sys.Date()) # Remove todays data (as these are still being updated)
 Int <- droplevels(Int)
+
 
 rm(IC_COV, COV_limb, Hosp_limb, Death_limb) #clean workspace
 
@@ -431,96 +436,45 @@ dev.off()
 png("Figures/Incidentie_INT.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Int[Int$iso == levels(Int$iso)[22], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[22], ]$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
-     ylim = c(0, ceiling(max(Int$I_COV_smooth, na.rm = TRUE))), main = "COVID-19 incidentie", type = "l", col = "black", lwd = 2)
-lines(Int[Int$iso == levels(Int$iso)[1], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[1], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[2], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[2], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[3], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[3], ]$date, type = "l", col = palette.colors(palette = "Set 1")[4], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[4], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[4], ]$date, type = "l", col = palette.colors(palette = "Set 1")[5], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[5], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[5], ]$date, type = "l", col = palette.colors(palette = "Set 1")[6], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[6], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[6], ]$date, type = "l", col = palette.colors(palette = "Set 1")[7], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[7], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[7], ]$date, type = "l", col = palette.colors(palette = "Set 1")[8], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[8], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[8], ]$date, type = "l", col = palette.colors(palette = "Set 1")[1], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[9], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[9], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[10], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[10], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[11], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[11], ]$date, type = "l", col = palette.colors(palette = "Set 1")[4], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[12], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[12], ]$date, type = "l", col = palette.colors(palette = "Set 1")[5], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[13], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[13], ]$date, type = "l", col = palette.colors(palette = "Set 1")[6], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[14], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[14], ]$date, type = "l", col = palette.colors(palette = "Set 1")[7], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[15], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[15], ]$date, type = "l", col = palette.colors(palette = "Set 1")[8], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[16], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[16], ]$date, type = "l", col = palette.colors(palette = "Set 1")[1], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[17], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[17], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[18], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[18], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[19], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[19], ]$date, type = "l", col = palette.colors(palette = "Set 1")[4], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[20], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[20], ]$date, type = "l", col = palette.colors(palette = "Set 1")[5], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[21], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[21], ]$date, type = "l", col = palette.colors(palette = "Set 1")[6], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[23], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[23], ]$date, type = "l", col = palette.colors(palette = "Set 1")[7], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[24], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[24], ]$date, type = "l", col = palette.colors(palette = "Set 1")[8], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[25], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[25], ]$date, type = "l", col = palette.colors(palette = "Set 1")[1], lwd = 0.5, lty = "1234")
-lines(Int[Int$iso == levels(Int$iso)[26], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[26], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 0.5, lty = "1234")
-lines(Int[Int$iso == levels(Int$iso)[27], ]$I_COV_smooth ~ Int[Int$iso == levels(Int$iso)[27], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 0.5, lty = "1234")
-abline(h = seq(0, ceiling(max(Int$I_COV_smooth, na.rm = TRUE)/2000) * 2000, 2000), lty = 3, 
+plot(COV$I_rel ~ COV$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+     ylim = c(0, 600), main = "COVID-19 incidentie", type = "l", col = "black", lwd = 4)
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(50, 50, 150, 150), 
+        col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(150, 150, 250, 250), 
+        col = adjustcolor("orange", alpha.f = 0.3), border = NA)
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(250, 250, 100000, 100000), 
+        col = adjustcolor("red", alpha.f = 0.3), border = NA)
+lines(Int[Int$iso == levels(Int$iso)[1], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[1], ]$date, type = "l", col = palette.colors(palette = "Set 1")[1], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[2], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[2], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[3], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[3], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[4], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[4], ]$date, type = "l", col = palette.colors(palette = "Set 1")[4], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[5], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[5], ]$date, type = "l", col = palette.colors(palette = "Set 1")[5], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[6], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[6], ]$date, type = "l", col = palette.colors(palette = "Set 1")[6], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[7], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[7], ]$date, type = "l", col = palette.colors(palette = "Set 1")[7], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[8], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[8], ]$date, type = "l", col = palette.colors(palette = "Set 1")[8], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[9], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[9], ]$date, type = "l", col = palette.colors(palette = "Set 1")[1], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[10], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[10], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[11], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[11], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[12], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[12], ]$date, type = "l", col = palette.colors(palette = "Set 1")[4], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[14], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[14], ]$date, type = "l", col = palette.colors(palette = "Set 1")[5], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[15], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[15], ]$date, type = "l", col = palette.colors(palette = "Set 1")[6], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[16], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[16], ]$date, type = "l", col = palette.colors(palette = "Set 1")[7], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[17], ]$Iweek_rel ~ Int[Int$iso == levels(Int$iso)[17], ]$date, type = "l", col = palette.colors(palette = "Set 1")[8], lwd = 2, lty = 2)
+abline(h = seq(0, ceiling(max(Int$Iweek_rel, na.rm = TRUE)/2000) * 2000, 2000), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 30, by = "1 month")), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-legend("topleft", inset = 0.05, col = c("black", rep(palette.colors(palette = "Set 1"), 3)), lwd = 0.5, lty=c(rep("solid", 8), rep("dashed", 8), rep("9414", 8), rep("1234", 3)), cex=0.6, box.lty=0,
-       legend = levels(Int$iso)[c(22, 1:21, 23:27)])
+
+legend("topleft", inset = 0.05, col = c("black", rep(palette.colors(palette = "Set 1"), 3)), lwd = 2, lty=c(rep("solid", 9), rep("dashed", 8), rep("9414", 8), rep("1234", 3)), cex=0.6, box.lty=1,
+       legend = levels(Int$iso)[c(13, 1:12, 14:17)])
 
 dev.off()
 
-# Incidentie per 100.000 per week
-png("Figures/Incidentie_INT_per100000.png", width = 1000, height = 600, pointsize = 18)
-par(mar = c(5.1, 4.1, 4.1, 1.1))
-
-plot(Int[Int$iso == levels(Int$iso)[22], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[22], ]$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
-     ylim = c(0, ceiling(max(Int$I_COV_rel_smooth, na.rm = TRUE))), main = "COVID-19 incidentie per 100.000", type = "l", col = "black", lwd = 2)
-lines(Int[Int$iso == levels(Int$iso)[1], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[1], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[2], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[2], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[3], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[3], ]$date, type = "l", col = palette.colors(palette = "Set 1")[4], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[4], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[4], ]$date, type = "l", col = palette.colors(palette = "Set 1")[5], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[5], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[5], ]$date, type = "l", col = palette.colors(palette = "Set 1")[6], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[6], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[6], ]$date, type = "l", col = palette.colors(palette = "Set 1")[7], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[7], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[7], ]$date, type = "l", col = palette.colors(palette = "Set 1")[8], lwd = 0.5)
-lines(Int[Int$iso == levels(Int$iso)[8], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[8], ]$date, type = "l", col = palette.colors(palette = "Set 1")[1], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[9], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[9], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[10], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[10], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[11], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[11], ]$date, type = "l", col = palette.colors(palette = "Set 1")[4], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[12], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[12], ]$date, type = "l", col = palette.colors(palette = "Set 1")[5], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[13], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[13], ]$date, type = "l", col = palette.colors(palette = "Set 1")[6], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[14], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[14], ]$date, type = "l", col = palette.colors(palette = "Set 1")[7], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[15], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[15], ]$date, type = "l", col = palette.colors(palette = "Set 1")[8], lwd = 0.5, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[16], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[16], ]$date, type = "l", col = palette.colors(palette = "Set 1")[1], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[17], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[17], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[18], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[18], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[19], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[19], ]$date, type = "l", col = palette.colors(palette = "Set 1")[4], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[20], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[20], ]$date, type = "l", col = palette.colors(palette = "Set 1")[5], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[21], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[21], ]$date, type = "l", col = palette.colors(palette = "Set 1")[6], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[23], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[23], ]$date, type = "l", col = palette.colors(palette = "Set 1")[7], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[24], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[24], ]$date, type = "l", col = palette.colors(palette = "Set 1")[8], lwd = 0.5, lty = "9414")
-lines(Int[Int$iso == levels(Int$iso)[25], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[25], ]$date, type = "l", col = palette.colors(palette = "Set 1")[1], lwd = 0.5, lty = "1234")
-lines(Int[Int$iso == levels(Int$iso)[26], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[26], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 0.5, lty = "1234")
-lines(Int[Int$iso == levels(Int$iso)[27], ]$I_COV_rel_smooth ~ Int[Int$iso == levels(Int$iso)[27], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 0.5, lty = "1234")
-# polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
-#           date_start - 30), c(50, 50, 150, 150),
-#         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
-# polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
-#           date_start - 30), c(150, 150, 250, 250),
-#         col = adjustcolor("orange", alpha.f = 0.3), border = NA)
-# polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
-#           date_start - 30), c(250, 250, 100000, 100000),
-#         col = adjustcolor("red", alpha.f = 0.3), border = NA)
-abline(h = seq(0, ceiling(max(Int$I_COV_rel_smooth, na.rm = TRUE)/50) * 50, 50), lty = 3, 
-       col = adjustcolor("grey", alpha.f = 0.7))
-abline(v = as.Date(seq(as.Date("2020-1-1"), Sys.Date() + 30, by = "1 month")), lty = 3, 
-       col = adjustcolor("grey", alpha.f = 0.7))
-abline(v = as.Date(seq(as.Date("2020-1-15"), Sys.Date() + 30, by = "1 month")), lty = 3, 
-       col = adjustcolor("grey", alpha.f = 0.7))
-legend("topleft", inset = 0.05, col = c("black", rep(palette.colors(palette = "Set 1"), 3)), lwd = 0.5, lty=c(rep("solid", 8), rep("dashed", 8), rep("9414", 8), rep("1234", 3)), cex=0.6, box.lty=0,
-       legend = levels(Int$iso)[c(22, 1:21, 23:27)])
-
-dev.off()
 
 # Positieve testen per 100.000 per week --> only missings for NL
 # png("Figures/Incidentie_test_INT_per100000.png", width = 1000, height = 600, pointsize = 18)
