@@ -250,7 +250,7 @@ png("Figures/ICopnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(IC$I_COV ~ IC$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, lwd = 2, xlim = c(date_start, Sys.Date() + 7),
-     main = "COVID-19 IC opnames - incidentie", type = "l", lty = 1)
+     main = "COVID-19 IC opnames - incidentie/dag", type = "l", lty = 1)
 lines(IC$I ~ IC$date, type = "l", lwd = 2, lty = 2)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(0, 0, 10, 10), 
@@ -335,7 +335,7 @@ dev.off()
 png("Figures/Perc_test_pos_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV_test$prop_pos*100 ~ COV_test$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+plot(COV_test$prop_pos*100 ~ COV_test$date, ylab = "%", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
      main = "COVID-19 percentage positieve testen", type = "l")
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(0.05*100, 0.05*100, 0.1*100, 0.1*100), 
@@ -441,7 +441,7 @@ png("Figures/Incidentie_INT.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV$I_rel ~ COV$date, ylab = "", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
-     ylim = c(0, 600), main = "COVID-19 incidentie", type = "l", col = "black", lwd = 4)
+     ylim = c(0, 600), main = "COVID-19 incidentie/week per 100.000", type = "l", col = "black", lwd = 4)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(50, 50, 150, 150), 
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
@@ -536,7 +536,7 @@ dev.off()
 png("Figures/Perc_test_pos_INT.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV_test$prop_pos*100 ~ COV_test$date, ylab = "percentage", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+plot(COV_test$prop_pos*100 ~ COV_test$date, ylab = "%", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
      ylim = c(0, 20), main = "COVID-19 percentage positieve testen", type = "l", col = "black", lwd = 4)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
           date_start - 30), c(5, 5, 10, 10),
