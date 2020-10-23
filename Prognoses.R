@@ -154,30 +154,10 @@ pred_Death <- f_trend(x = Death$Iweek)$pred
 ###### FIGUREN ###### 
 # singaalwaardes obv https://www.rijksoverheid.nl/documenten/publicaties/2020/10/13/risiconiveaus-en-maatregelen-covid-19
 
-###### IC COVID-19 #####
-# IC TOTAL AND COVID-19
-png("Figures/ICopnames_NL.png", width = 1000, height = 600, pointsize = 18)
-par(mar = c(5.1, 4.1, 4.1, 1.1))
+png("Figures/Date.png", width = 1000, height = 600, pointsize = 18)
 
-plot(IC$I_COV ~ IC$date, ylab = "Incidentie/dag", xlab = "Datum", pch = 16, cex = 0.6, lwd = 2, xlim = c(date_start, Sys.Date() + 7),
-     main = "COVID-19 IC opnames", type = "l", lty = 1, xaxt = "n")
-lines(IC$I ~ IC$date, type = "l", lwd = 2, lty = 2)
-polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
-          date_start - 30), c(0, 0, 10, 10), 
-        col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
-polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
-          date_start - 30), c(10, 10, 20, 20), 
-        col = adjustcolor("orange", alpha.f = 0.3), border = NA)
-polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
-          date_start - 30), c(20, 20, 10000, 10000), 
-        col = adjustcolor("red", alpha.f = 0.3), border = NA)
-axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
-abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
-       col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(IC$I, na.rm = TRUE)/10) * 10, 10), lty = 3, 
-       col = adjustcolor("grey", alpha.f = 0.7))
-legend("topleft", inset = 0.05, col=c(1, 1), lty=c("solid", "dashed"), cex=0.6, lwd = 2, box.lty=1, 
-       legend=c("COVID-19 IC opnames", "Totaal IC opnames"))
+plot.new()
+text(0.1, 1, paste0("Plots created on: ", Sys.time()), adj = c(0,0))
 
 dev.off()
 
@@ -303,6 +283,33 @@ legend("topleft", inset = 0.05, col=c(1, 1), lty=c("solid", "9414"), cex=0.6, bo
 
 dev.off()
 
+###### IC COVID-19 #####
+# IC TOTAL AND COVID-19
+png("Figures/ICopnames_NL.png", width = 1000, height = 600, pointsize = 18)
+par(mar = c(5.1, 4.1, 4.1, 1.1))
+
+plot(IC$I_COV ~ IC$date, ylab = "Incidentie/dag", xlab = "Datum", pch = 16, cex = 0.6, lwd = 2, xlim = c(date_start, Sys.Date() + 7),
+     main = "COVID-19 IC opnames", type = "l", lty = 1, xaxt = "n")
+lines(IC$I ~ IC$date, type = "l", lwd = 2, lty = 2)
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(0, 0, 10, 10), 
+        col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(10, 10, 20, 20), 
+        col = adjustcolor("orange", alpha.f = 0.3), border = NA)
+polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
+          date_start - 30), c(20, 20, 10000, 10000), 
+        col = adjustcolor("red", alpha.f = 0.3), border = NA)
+axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
+abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(h = seq(0, ceiling(max(IC$I, na.rm = TRUE)/10) * 10, 10), lty = 3, 
+       col = adjustcolor("grey", alpha.f = 0.7))
+legend("topleft", inset = 0.05, col=c(1, 1), lty=c("solid", "dashed"), cex=0.6, lwd = 2, box.lty=1, 
+       legend=c("COVID-19 IC opnames", "Totaal IC opnames"))
+
+dev.off()
+
 ###### Verpleeghuislocaties ######
 png("Figures/Verpleeghuislocaties_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
@@ -336,7 +343,7 @@ dev.off()
 
 ###### Internationaal ######
 # Incidentie
-png("Figures/Incidentie_INT.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/Incidentie_INT_per100000.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV$I_rel ~ COV$date, ylab = "Incidentie/week per 100.000", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
