@@ -125,6 +125,7 @@ Int <- data.frame(continent = as.factor(dat_OWiD$continent),
                   I_COV_rel_smooth = pmax(dat_OWiD$new_cases_smoothed_per_million/10, 0),
                   I_test_pos_rel = pmax(dat_OWiD$new_tests_per_thousand * dat_OWiD$positive_rate * 100, 0),
                   prop_test_pos = pmax(dat_OWiD$positive_rate, 0),
+                  stringency_index = dat_OWiD$stringency_index,
                   GDP = dat_OWiD$gdp_per_capita,
                   LE = dat_OWiD$life_expectancy,
                   date = as.Date(dat_OWiD$date)
@@ -420,6 +421,39 @@ legend("topleft", inset = 0.05, col = c("black", rep(palette.colors(palette = "S
        legend = levels(Int$iso)[c(13, 1:12, 14:17)])
 
 dev.off()
+
+# Government Stringency Index (see https://ourworldindata.org/policy-responses-covid#government-stringency-index)
+png("Figures/Stringency_index_INT.png", width = 1000, height = 600, pointsize = 18)
+par(mar = c(5.1, 4.1, 4.1, 1.1))
+
+plot(Int[Int$iso == levels(Int$iso)[13], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[13], ]$date, ylab = "Index", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+     ylim = c(0, 100), main = "Government Stringency Index - composite of nine response metrics", type = "l", col = "black", lwd = 4, xaxt = "n")
+lines(Int[Int$iso == levels(Int$iso)[1], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[1], ]$date, type = "l", col = palette.colors(palette = "Set 1")[1], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[2], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[2], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[3], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[3], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[4], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[4], ]$date, type = "l", col = palette.colors(palette = "Set 1")[4], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[5], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[5], ]$date, type = "l", col = palette.colors(palette = "Set 1")[5], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[6], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[6], ]$date, type = "l", col = palette.colors(palette = "Set 1")[7], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[7], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[7], ]$date, type = "l", col = palette.colors(palette = "Set 1")[8], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[8], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[8], ]$date, type = "l", col = palette.colors(palette = "Set 1")[9], lwd = 2)
+lines(Int[Int$iso == levels(Int$iso)[9], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[9], ]$date, type = "l", col = palette.colors(palette = "Set 1")[1], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[10], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[10], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[11], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[11], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[12], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[12], ]$date, type = "l", col = palette.colors(palette = "Set 1")[4], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[14], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[14], ]$date, type = "l", col = palette.colors(palette = "Set 1")[5], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[15], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[15], ]$date, type = "l", col = palette.colors(palette = "Set 1")[7], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[16], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[16], ]$date, type = "l", col = palette.colors(palette = "Set 1")[8], lwd = 2, lty = 2)
+lines(Int[Int$iso == levels(Int$iso)[17], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[17], ]$date, type = "l", col = palette.colors(palette = "Set 1")[9], lwd = 2, lty = 2)
+axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
+abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
+       col = adjustcolor("grey", alpha.f = 0.7))
+abline(h = seq(0, 100, 5), lty = 3,
+       col = adjustcolor("grey", alpha.f = 0.7))
+legend("bottomleft", inset = 0.05, col = c("black", rep(palette.colors(palette = "Set 1")[c(1:5, 7:9)], 3)), lwd = 2, lty=c(rep("solid", 9), rep("dashed", 8), rep("9414", 8), rep("1234", 3)), cex=0.6, box.lty=1,
+       legend = levels(Int$iso)[c(13, 1:12, 14:17)])
+
+dev.off()
+
 
 ###### Save R session ######
 save.image(file="Figures/COVID19.RData") 
