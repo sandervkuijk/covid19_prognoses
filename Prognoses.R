@@ -7,6 +7,8 @@ library(rms)
 library(forecast)
 library(zoo)
 source("f_trend.R")
+library(rjson)
+library(tidyverse)
 
 palette(c("black", "white"))
 date_start <- as.Date("2020-6-1") #as.Date("2020-3-14") #selected 1 day after RIVM data starts 
@@ -33,13 +35,45 @@ dat_OWiD <- fread("https://raw.githubusercontent.com/owid/covid-19-data/master/p
 # Sci Data 7, 345 (2020). https://doi.org/10.1038/s41597-020-00688-8
 
 
+# New patients at IC 
+ic_intake <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/new-intake/",simplify = TRUE) %>%
+  map(as.data.table) %>%
+  rbindlist(fill=TRUE)
+ic_intake <- as.data.frame(t(ic_intake[c(1, 2, 4),]))
+ic_intake$date <- unlist(ic_intake$V1)
+ic_intake$ic_intake_proven <- unlist(ic_intake$V2)
+ic_intake$ic_intake_suspected <- unlist(ic_intake$V3)
+ic_intake <- ic_intake[,c(4:6)]
+# IC patients cumulative
+ic.cumulative <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/intake-cumulative",simplify = TRUE) %>%
+  map(as.data.table) %>%
+  rbindlist(fill = TRUE)
+#New patients hospital
+json_zkh_df <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/new-intake/",simplify=TRUE) %>%
+  map(as.data.table) %>%
+  rbindlist(fill=TRUE)
+zkh_new <- as.data.frame(t(json_zkh_df[c(1,2,4),]))
+zkh_new$date <- unlist(zkh_new$V1)
+zkh_new$new_hosp_proven <- unlist(zkh_new$V2)
+zkh_new$new_hosp_suspected <- unlist(zkh_new$V3)
+zkh_new <- zkh_new[,c(4:6)]
+#Hospital patients cumulative
+zkh.cumulative <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/intake-cumulative/",simplify = TRUE) %>%
+  map(as.data.table) %>%
+  rbindlist(fill = TRUE)
+
 # Data manipulation
-IC <- dat_NICE$CumulatiefOpnamen # Total number of IC intakes since the start of the outbreak
-IC_COV <- dat_NICE$ToenameOpnamen # Number of newly confirmed or suspected COVID-19 IC intakes 
+ic.cumulative$value<- as.numeric(ic.cumulative$value)
+ic_intake$ic_intake_proven<- as.numeric(ic_intake$ic_intake_proven)
+ic_intake$ic_intake_suspected<- as.numeric(ic_intake$ic_intake_suspected)
+
+IC <- aggregate(formula = value ~ date, FUN = sum, data = ic.cumulative)
+IC_COV<- aggregate(formula = ic_intake_proven + ic_intake_suspected ~ date, FUN = sum, data = ic_intake)
+IC_COV$value<- IC_COV$'ic_intake_proven + ic_intake_suspected'
 COV <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, data = dat_RIVM)
 COV_limb <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, 
                       data = subset(dat_RIVM, Province == "Limburg"))
-Hosp <- aggregate(formula = Hospital_admission ~ Date_of_report, FUN = sum, data = dat_RIVM)
+Hosp <- aggregate(formula = value ~ date, FUN = sum, data = zkh.cumulative)
 Hosp_limb <- aggregate(formula = Hospital_admission ~ Date_of_report, FUN = sum, 
                        data = subset(dat_RIVM, Province == "Limburg"))
 Death <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, data = dat_RIVM)
@@ -49,12 +83,13 @@ dat_RIVM_test$Type <- as.factor(dat_RIVM_test$Type)
 dat_RIVM_R$Type <- as.factor(dat_RIVM_R$Type)
 dat_CBS_prov$`Bevolking aan het einde van de periode (aantal)` <- as.numeric(dat_CBS_prov$`Bevolking aan het einde van de periode (aantal)`) 
 
+
 # Create dataframes 
 # I = incidentie, C = cumulatieve incidentie, A = huidig aantal, _rel = per 100,000
-IC <- data.frame(C = IC,
-                 I = pmax(IC - shift(IC, n=1, fill=0, type="lag"), 0, IC_COV),
-                 I_COV = IC_COV,
-                 date = as.Date(dat_NICE$Datum)
+IC <- data.frame(C = IC$value,
+                 I = pmax(IC$value - shift(IC$value, n=1, fill=0, type="lag"), 0, IC_COV$value),
+                 I_COV = IC_COV$value,
+                 date = as.Date(ic_intake$date)
 )
 IC <- subset(IC, IC$date >= date_start) # Select data from start date 
 IC <- subset(IC, IC$date <= (Sys.Date() - 2)) # Remove data that are still being updated
@@ -88,14 +123,14 @@ R0 <- data.frame(R = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[3], ]$W
 ) # Separate dataframe due to difference in dates 
 R0 <- subset(R0, R0$date >= date_start)
 
-Hosp <- data.frame(C = Hosp$Hospital_admission,
-                   I = pmax(Hosp$Hospital_admission - shift(Hosp$Hospital_admission, n=1, fill=0, type="lag"), 0),
+Hosp <- data.frame(C = Hosp$value,
+                   I = pmax(Hosp$value - shift(Hosp$value, n=1, fill=0, type="lag"), 0),
                    C_limb = Hosp_limb$Hospital_admission,
-                   I_limb = pmax(Hosp_limb$Hospital_admission - shift(Hosp_limb$Hospital_admission, n=1, fill=0, type="lag"), 0),
-                   date = as.Date(Hosp$Date_of_report)
+                  I_limb = pmax(Hosp_limb$Hospital_admission - shift(Hosp_limb$Hospital_admission, n=1, fill=0, type="lag"), 0),
+                   date = as.Date(Hosp$date)
 )
 Hosp <- subset(Hosp, Hosp$date >= date_start) # Select data from start date 
-Hosp <- subset(Hosp, Hosp$date <= Sys.Date()) # Remove todays data (as these are still being updated)
+Hosp <- subset(Hosp, Hosp$date <= Sys.Date()-1) # Remove todays data (as these are still being updated)
 
 Nurs <- data.frame(A = dat_RIVM_nursery$Aantal,
                    I = dat_RIVM_nursery$NieuwAantal,
@@ -168,7 +203,7 @@ png("Figures/Incidentie_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV$I ~ COV$date, ylab = "Incidentie/dag", xlab = "Datum", pch = 16, cex = 0.6, lwd = 2, xlim = c(date_start, Sys.Date() + 7),
-     main = "COVID-19 aantal nieuwe patiënten", type = "l", xaxt = "n")
+     main = "COVID-19 aantal nieuwe patienten", type = "l", xaxt = "n")
 factor <- 1 / 7 / (100000 / tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1)) 
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(50 * factor, 50 * factor, 150 * factor, 150 * factor), 
@@ -192,7 +227,7 @@ png("Figures/Incidentie_NL_per100000.png", width = 1000, height = 600, pointsize
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV$I_rel ~ COV$date, ylab = "Incidentie/week per 100.000", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
-     main = "COVID-19 aantal nieuwe patiënten", type = "l", lty = 1, lwd=2, xaxt = "n")
+     main = "COVID-19 aantal nieuwe patienten", type = "l", lty = 1, lwd=2, xaxt = "n")
 lines(COV_test$I_pos_rel ~ COV_test$date, type = "l", lty = 2, lwd=2)
 lines(COV$I_rel_limb ~ COV$date, type = "l", lty = "9414", lwd=2)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
@@ -210,9 +245,9 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
 abline(h = seq(0, ceiling(max(COV$I_rel, na.rm = TRUE)/50) * 50, 50), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 legend("topleft", inset = 0.05, col=c(1, 1, 1), lty=c("solid", "dashed", "9414"), cex=0.6, box.lty=1, 
-       legend=c("COVID-19 aantal patiënten",
+       legend=c("COVID-19 aantal patienten",
                 "COVID-19 aantal positieve testen", 
-                "COVID-19 aantal patiënten Limburg"))
+                "COVID-19 aantal patienten Limburg"))
   
 dev.off()
 
@@ -263,8 +298,8 @@ png("Figures/Opnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Hosp$I ~ Hosp$date, ylab = "Incidentie/dag", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
-     ylim = c(0, 150), main = "COVID-19 ziekenhuisopnames", type = "l", lwd = 2, xaxt = "n")
-lines(Hosp$I_limb ~ Hosp$date, type = "l", lty = "9414")
+     ylim = c(0, 350), main = "COVID-19 ziekenhuisopnames in Nederland", type = "l", lwd = 2, xaxt = "n")
+#lines(Hosp$I_limb ~ Hosp$date, type = "l", lty = "9414")
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(0, 0, 40, 40), 
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
@@ -279,8 +314,8 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(Hosp$I, na.rm = TRUE)/50) * 50, 50), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-legend("topleft", inset = 0.05, col=c(1, 1), lty=c("solid", "9414"), cex=0.6, box.lty=1,
-      legend=c("Nationaal", "Limburg"))
+#legend("topleft", inset = 0.05, col=c(1, 1), lty=c("solid", "9414"), cex=0.6, box.lty=1,
+     # legend=c("Nationaal", "Limburg"))
 
 dev.off()
 
@@ -289,9 +324,9 @@ dev.off()
 png("Figures/ICopnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(IC$I_COV ~ IC$date, ylab = "Incidentie/dag", xlab = "Datum", pch = 16, cex = 0.6, lwd = 2, xlim = c(date_start, Sys.Date() + 7),
-     main = "COVID-19 IC opnames", type = "l", lty = 1, xaxt = "n")
-lines(IC$I ~ IC$date, type = "l", lwd = 2, lty = 2)
+plot(IC$I ~ IC$date, ylab = "Incidentie/dag", xlab = "Datum", pch = 16, cex = 0.6, lwd = 2, xlim = c(date_start, Sys.Date() + 7),
+     main = "COVID-19 IC opnames in Nederland", type = "l", lty = 1, xaxt = "n")
+#lines(IC$I ~ IC$date, type = "l", lwd = 2, lty = 2)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(0, 0, 10, 10), 
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
@@ -306,8 +341,8 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(IC$I, na.rm = TRUE)/10) * 10, 10), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-legend("topleft", inset = 0.05, col=c(1, 1), lty=c("solid", "dashed"), cex=0.6, lwd = 2, box.lty=1, 
-       legend=c("COVID-19 IC opnames", "Totaal IC opnames"))
+#legend("topleft", inset = 0.05, col=c(1, 1), lty=c("solid", "dashed"), cex=0.6, lwd = 2, box.lty=1, 
+ #      legend=c("COVID-19 IC opnames", "Totaal IC opnames"))
 
 dev.off()
 
@@ -348,7 +383,7 @@ png("Figures/Incidentie_INT_per100000.png", width = 1000, height = 600, pointsiz
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV$I_rel ~ COV$date, ylab = "Incidentie/week per 100.000", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
-     ylim = c(0, 600), main = "COVID-19 aantal nieuwe patiënten", type = "l", col = "black", lwd = 4, xaxt = "n")
+     ylim = c(0, 900), main = "COVID-19 aantal nieuwe patienten", type = "l", col = "black", lwd = 4, xaxt = "n")
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(50, 50, 150, 150), 
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
@@ -389,7 +424,7 @@ png("Figures/Perc_test_pos_INT.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV_test$prop_pos * 100 ~ COV_test$date, ylab = "%", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
-     ylim = c(0, 20), main = "COVID-19 percentage positieve testen", type = "l", col = "black", lwd = 4, xaxt = "n")
+     ylim = c(0, 25), main = "COVID-19 percentage positieve testen", type = "l", col = "black", lwd = 4, xaxt = "n")
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
           date_start - 30), c(5, 5, 10, 10),
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
