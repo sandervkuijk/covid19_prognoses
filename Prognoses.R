@@ -2,20 +2,28 @@
 Sys.setlocale("LC_TIME", "Dutch") #set to Dutch locale (to get Dutch month names) for this session
 options(scipen = 999)
 rm(list = ls())
+
 library(data.table)
 library(rms)
 library(forecast)
 library(zoo)
-source("f_trend.R")
-library(rjson)
 library(tidyverse)
+source("f_trend.R")
 
 palette(c("black", "white"))
 date_start <- as.Date("2020-6-1") #as.Date("2020-3-14") #selected 1 day after RIVM data starts 
 lbls <- format(seq(date_start, Sys.Date() + 30, by = "2 week"), "%e %b")
 
 ###### RETRIEVE AND MANIPULATE DATA ######
-dat_NICE <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-ic/data-nice/NICE_IC_wide_latest.csv?raw=true") 
+#dat_NICE <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-ic/data-nice/NICE_IC_wide_latest.csv?raw=true") 
+#dat_NICE_IC_int <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/new-intake/",simplify = TRUE)
+#dat_NICE_IC_int <- dat_NICE_IC_int %>% map(as.data.table) %>% rbindlist(fill=TRUE)
+dat_NICE_IC_C <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/intake-cumulative",simplify = TRUE)
+dat_NICE_IC_C <- dat_NICE_IC_C %>% map(as.data.table) %>% rbindlist(fill = TRUE)
+#dat_NICE_Hosp_int <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/new-intake/",simplify = TRUE)
+#dat_NICE_Hosp_int <- dat_NICE_Hosp_int %>% map(as.data.table) %>% rbindlist(fill = TRUE)
+dat_NICE_Hosp_C <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/intake-cumulative/",simplify = TRUE)
+dat_NICE_Hosp_C <- dat_NICE_Hosp_C %>% map(as.data.table) %>% rbindlist(fill = TRUE)
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
 dat_RIVM_test <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-misc/data-test/RIVM_NL_test_latest.csv?raw=true")
 dat_RIVM_R <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-reproduction/RIVM_NL_reproduction_index.csv?raw=true")
@@ -34,46 +42,12 @@ dat_OWiD <- fread("https://raw.githubusercontent.com/owid/covid-19-data/master/p
 # Hasell, J., Mathieu, E., Beltekian, D. et al. A cross-country database of COVID-19 testing. 
 # Sci Data 7, 345 (2020). https://doi.org/10.1038/s41597-020-00688-8
 
-
-# New patients at IC 
-ic_intake <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/new-intake/",simplify = TRUE) %>%
-  map(as.data.table) %>%
-  rbindlist(fill=TRUE)
-ic_intake <- as.data.frame(t(ic_intake[c(1, 2, 4),]))
-ic_intake$date <- unlist(ic_intake$V1)
-ic_intake$ic_intake_proven <- unlist(ic_intake$V2)
-ic_intake$ic_intake_suspected <- unlist(ic_intake$V3)
-ic_intake <- ic_intake[,c(4:6)]
-# IC patients cumulative
-ic.cumulative <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/intake-cumulative",simplify = TRUE) %>%
-  map(as.data.table) %>%
-  rbindlist(fill = TRUE)
-#New patients hospital
-json_zkh_df <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/new-intake/",simplify=TRUE) %>%
-  map(as.data.table) %>%
-  rbindlist(fill=TRUE)
-zkh_new <- as.data.frame(t(json_zkh_df[c(1,2,4),]))
-zkh_new$date <- unlist(zkh_new$V1)
-zkh_new$new_hosp_proven <- unlist(zkh_new$V2)
-zkh_new$new_hosp_suspected <- unlist(zkh_new$V3)
-zkh_new <- zkh_new[,c(4:6)]
-#Hospital patients cumulative
-zkh.cumulative <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/intake-cumulative/",simplify = TRUE) %>%
-  map(as.data.table) %>%
-  rbindlist(fill = TRUE)
-
 # Data manipulation
-ic.cumulative$value<- as.numeric(ic.cumulative$value)
-ic_intake$ic_intake_proven<- as.numeric(ic_intake$ic_intake_proven)
-ic_intake$ic_intake_suspected<- as.numeric(ic_intake$ic_intake_suspected)
-
-IC <- aggregate(formula = value ~ date, FUN = sum, data = ic.cumulative)
-IC_COV<- aggregate(formula = ic_intake_proven + ic_intake_suspected ~ date, FUN = sum, data = ic_intake)
-IC_COV$value<- IC_COV$'ic_intake_proven + ic_intake_suspected'
+IC <- aggregate(formula = value ~ date, FUN = sum, data = dat_NICE_IC_C)
 COV <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, data = dat_RIVM)
 COV_limb <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, 
                       data = subset(dat_RIVM, Province == "Limburg"))
-Hosp <- aggregate(formula = value ~ date, FUN = sum, data = zkh.cumulative)
+Hosp <- aggregate(formula = value ~ date, FUN = sum, data = dat_NICE_Hosp_C)
 Hosp_limb <- aggregate(formula = Hospital_admission ~ Date_of_report, FUN = sum, 
                        data = subset(dat_RIVM, Province == "Limburg"))
 Death <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, data = dat_RIVM)
@@ -83,13 +57,12 @@ dat_RIVM_test$Type <- as.factor(dat_RIVM_test$Type)
 dat_RIVM_R$Type <- as.factor(dat_RIVM_R$Type)
 dat_CBS_prov$`Bevolking aan het einde van de periode (aantal)` <- as.numeric(dat_CBS_prov$`Bevolking aan het einde van de periode (aantal)`) 
 
-
 # Create dataframes 
 # I = incidentie, C = cumulatieve incidentie, A = huidig aantal, _rel = per 100,000
 IC <- data.frame(C = IC$value,
-                 I = pmax(IC$value - shift(IC$value, n=1, fill=0, type="lag"), 0, IC_COV$value),
-                 I_COV = IC_COV$value,
-                 date = as.Date(ic_intake$date)
+                 I = pmax(IC$value - shift(IC$value, n=1, fill=0, type="lag"), 0),
+                 #I_COV = IC_COV$value,
+                 date = as.Date(IC$date)
 )
 IC <- subset(IC, IC$date >= date_start) # Select data from start date 
 IC <- subset(IC, IC$date <= (Sys.Date() - 2)) # Remove data that are still being updated
@@ -125,8 +98,8 @@ R0 <- subset(R0, R0$date >= date_start)
 
 Hosp <- data.frame(C = Hosp$value,
                    I = pmax(Hosp$value - shift(Hosp$value, n=1, fill=0, type="lag"), 0),
-                   C_limb = Hosp_limb$Hospital_admission,
-                  I_limb = pmax(Hosp_limb$Hospital_admission - shift(Hosp_limb$Hospital_admission, n=1, fill=0, type="lag"), 0),
+                   #C_limb = Hosp_limb$Hospital_admission,
+                   #I_limb = pmax(Hosp_limb$Hospital_admission - shift(Hosp_limb$Hospital_admission, n=1, fill=0, type="lag"), 0),
                    date = as.Date(Hosp$date)
 )
 Hosp <- subset(Hosp, Hosp$date >= date_start) # Select data from start date 
@@ -175,11 +148,11 @@ Int$Iweek_rel <- Int$Iweek/Int$population * 100000
 Int <- subset(Int, Int$date >= date_start) # Select data from start date 
 Int <- subset(Int, Int$date <= Sys.Date()) # Remove todays data (as these are still being updated)
 
-rm(IC_COV, COV_limb, Hosp_limb, Death_limb) #clean workspace
+rm(COV_limb, Hosp_limb, Death_limb) #clean workspace
 
 ###### TRENDLIJN ######
 pred_IC <- f_trend(x = IC$I)$pred
-pred_IC_COV <- f_trend(x = IC$I_COV)$pred
+#pred_IC_COV <- f_trend(x = IC$I_COV)$pred
 pred_COV <- f_trend(x = COV$I)$pred
 #pred_COV_test_pos <- f_trend(x = COV_test$I_pos)$pred
 #pred_COV_test_prop_pos <- f_trend(x = COV_test$prop_pos)$pred
@@ -275,7 +248,7 @@ dev.off()
 png("Figures/R0_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(R0$R ~ R0$date, ylab = "R0", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+plot(R0$R ~ R0$date, ylab = "R", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
      ylim = c(0, 2), main = "COVID-19 reproductie index",  type = "l", lwd = 2, xaxt = "n")
 polygon(c(R0$date, rev(R0$date)), c(R0$Rmin, rev(R0$Rmax)), 
         col = adjustcolor("black", alpha.f = 0.3), border = NA)
