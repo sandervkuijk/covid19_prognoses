@@ -1,10 +1,10 @@
-f_trend <- function(x, time = 7, name = "no_name") {
+f_trend <- function(x, time = 7, span = 0.25) {
 
 dag <- 1:length(x)
 time_pred <- seq(length(x) + 1, length.out = time)
 
 # loess
-loess <- loess(x ~ dag, control = loess.control(surface = "direct"), span = 0.25)
+loess <- loess(x ~ dag, control = loess.control(surface = "direct"), span = span)
 pred_loess <- predict(loess, data.frame(dag = time_pred), se = TRUE)[[1]]
 pred_loess_se  <- predict(loess, data.frame(dag = time_pred), se = TRUE)[[2]]
 pred_loess_lo <- pred_loess - pred_loess_se * qnorm(.975)

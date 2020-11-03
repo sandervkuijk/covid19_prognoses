@@ -157,9 +157,9 @@ Int <- subset(Int, Int$date >= date_start) # Select data from start date
 rm(COV_limb, Hosp_limb, Death_limb) #clean workspace
 
 ###### TRENDLIJN ######
-pred_IC <- f_trend(x = IC$I)$pred
-pred_COV <- f_trend(x = COV$I)$pred
-pred_Hosp <- f_trend(x = Hosp$I)$pred
+pred_COV <- f_trend(x = COV$I, time = 7, span = 0.25)$pred
+pred_Hosp <- f_trend(x = Hosp$I, time = 7, span = 0.25)$pred
+pred_IC <- f_trend(x = IC$I, time = 7, span = 0.25)$pred
 
 ###### FIGUREN ###### 
 # Singaalwaardes obv https://www.rijksoverheid.nl/documenten/publicaties/2020/10/13/risiconiveaus-en-maatregelen-covid-19
@@ -193,6 +193,8 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(COV$I, na.rm = TRUE)/2000) * 2000, 2000), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
+points(pred_COV$loess[7] ~ as.Date(max(COV$date) + 7), pch = 16, cex = 0.6, col = "blue")
+lines(c(pred_COV$lo[7], pred_COV$up[7]) ~ c(as.Date(max(COV$date) + 7), as.Date(max(COV$date) + 7)), lwd = 1, col = "blue")
 
 dev.off()
 
@@ -287,6 +289,8 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(Hosp$I_3d / 3, na.rm = TRUE)/50) * 50, 50), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
+points(pred_Hosp$loess[7] ~ as.Date(max(Hosp$date) + 7), pch = 16, cex = 0.6, col = "blue")
+lines(c(pred_Hosp$lo[7], pred_Hosp$up[7]) ~ c(as.Date(max(Hosp$date) + 7), as.Date(max(Hosp$date) + 7)), lwd = 1, col = "blue")
 
 dev.off()
 
@@ -310,6 +314,8 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(IC$I_3d / 3, na.rm = TRUE)/10) * 10, 10), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
+points(pred_IC$loess[7] ~ as.Date(max(IC$date) + 7), pch = 16, cex = 0.6, col = "blue")
+lines(c(pred_IC$lo[7], pred_IC$up[7]) ~ c(as.Date(max(IC$date) + 7), as.Date(max(IC$date) + 7)), lwd = 1, col = "blue")
 
 dev.off()
 
