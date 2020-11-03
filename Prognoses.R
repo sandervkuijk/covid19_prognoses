@@ -17,10 +17,12 @@ lbls <- format(seq(date_start, Sys.Date() + 30, by = "2 week"), "%e %b")
 
 ###### RETRIEVE AND MANIPULATE DATA ######
 #dat_NICE <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-ic/data-nice/NICE_IC_wide_latest.csv?raw=true") 
-#dat_NICE_IC_int <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/new-intake/",simplify = TRUE)
-#dat_NICE_IC_int <- dat_NICE_IC_int %>% map(as.data.table) %>% rbindlist(fill=TRUE)
-#dat_NICE_Hosp_int <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/new-intake/",simplify = TRUE)
-#dat_NICE_Hosp_int <- dat_NICE_Hosp_int %>% map(as.data.table) %>% rbindlist(fill = TRUE)
+dat_NICE_IC_int <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/new-intake/",simplify = TRUE)
+dat_NICE_IC_int <- dat_NICE_IC_int %>% map(as.data.table) %>% rbindlist(fill=TRUE)
+dat_NICE_IC_int <- as.data.frame(t(dat_NICE_IC_int))[, -3]
+dat_NICE_Hosp_int <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/new-intake/",simplify = TRUE)
+dat_NICE_Hosp_int <- dat_NICE_Hosp_int %>% map(as.data.table) %>% rbindlist(fill = TRUE)
+dat_NICE_Hosp_int <- as.data.frame(t(dat_NICE_Hosp_int))[, -3]
 dat_NICE_IC_C <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/intake-cumulative",simplify = TRUE)
 dat_NICE_IC_C <- dat_NICE_IC_C %>% map(as.data.table) %>% rbindlist(fill = TRUE)
 dat_NICE_Hosp_C <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/intake-cumulative/",simplify = TRUE)
@@ -93,7 +95,7 @@ R0 <- data.frame(R = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[3], ]$W
 R0 <- subset(R0, R0$date >= date_start)
 
 Hosp <- data.frame(C = Hosp$value,
-                   I = pmax(Hosp$value - shift(Hosp$value, n=1, fill=0, type="lag"), 0),
+                   I = unlist(dat_NICE_Hosp_int[, 2]) + unlist(dat_NICE_Hosp_int[, 3]), #pmax(Hosp$value - shift(Hosp$value, n=1, fill=0, type="lag"), 0),
                    date = as.Date(Hosp$date)
 )
 Hosp$I_3d <- rollsumr(Hosp$I, k = 3, fill = NA)
@@ -101,7 +103,7 @@ Hosp <- subset(Hosp, Hosp$date >= date_start) # Select data from start date
 Hosp <- subset(Hosp, Hosp$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
 IC <- data.frame(C = IC$value,
-                 I = pmax(IC$value - shift(IC$value, n=1, fill=0, type="lag"), 0),
+                 I = unlist(dat_NICE_IC_int[, 2]) + unlist(dat_NICE_IC_int[, 3]), #pmax(IC$value - shift(IC$value, n=1, fill=0, type="lag"), 0),
                  date = as.Date(IC$date)
 )
 IC$I_3d <- rollsumr(IC$I, k = 3, fill = NA)
@@ -171,7 +173,7 @@ text(0.1, 1, paste0("Plots created on: ", Sys.time()), adj = c(0,0))
 
 dev.off()
 
-###### COVID-19 patiënten ###### 
+###### Gemelde patiënten ###### 
 # Incidentie
 png("Figures/Incidentie_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 5.1, 4.1, 1.1))
@@ -294,7 +296,7 @@ lines(c(pred_Hosp$lo[7], pred_Hosp$up[7]) ~ c(as.Date(max(Hosp$date) + 7), as.Da
 
 dev.off()
 
-###### IC ###### 
+###### IC opnames ###### 
 png("Figures/ICopnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 5.1, 4.1, 1.1))
 
@@ -319,7 +321,7 @@ lines(c(pred_IC$lo[7], pred_IC$up[7]) ~ c(as.Date(max(IC$date) + 7), as.Date(max
 
 dev.off()
 
-###### COVID-19 verpleeghuislocaties ######
+###### Verpleeghuislocaties ######
 png("Figures/Verpleeghuislocaties_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 5.1, 4.1, 1.1))
 
@@ -333,7 +335,7 @@ abline(h = seq(0, ceiling(max(Nurs$I_3d / 3, na.rm = TRUE)/5) * 5, 5), lty = 3,
 
 dev.off()
 
-###### COVID-19 sterfte ######
+###### Sterfte ######
 png("Figures/Sterfte_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 5.1, 4.1, 1.1))
 
