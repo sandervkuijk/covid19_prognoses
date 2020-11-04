@@ -161,6 +161,8 @@ rm(COV_limb, Hosp_limb, Death_limb) #clean workspace
 
 ###### TRENDLIJN ######
 pred_COV <- f_trend(x = COV$I, time = 7, span = 0.25)$pred
+pred_COV_rel <- pred_COV
+pred_COV_rel[, 2:9] <- pred_COV_rel[, 2:9] /tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1) * 100000
 pred_Hosp <- f_trend(x = Hosp$I, time = 7, span = 0.25)$pred
 pred_IC <- f_trend(x = IC$I, time = 7, span = 0.25)$pred
 
@@ -179,7 +181,7 @@ dev.off()
 png("Figures/Incidentie_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV$I_3d / 3 ~ COV$date, ylab = "Incidentie/dag", xlab = "Datum", lwd = 2, xlim = c(date_start, Sys.Date() + 7),
+plot(COV$I_3d / 3 ~ COV$date, ylab = "Incidentie/dag", xlab = "Datum", lwd = 2, xlim = c(date_start, Sys.Date() + 10),
      main = "COVID-19 aantal nieuwe gemelde patienten  (RIVM-GGD)", type = "l", xaxt = "n", ylim = c(0, max(COV$I, na.rm = TRUE)))
 points(COV$I ~ COV$date, cex = 0.6, pch = 16)
 factor <- 1 / 7 / (100000 / tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1)) 
@@ -206,12 +208,12 @@ legend("topleft", inset = 0.05, col=c(1, 1), lty=c(NA, "solid"), cex=0.6, pch=c(
 
 dev.off()
 
-# Incidentie per 100.000 per week
+# Incidentie per 100.000 
 png("Figures/Incidentie_NL_per100000.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV$I_3d_rel / 3 ~ COV$date, ylab = "Incidentie/dag per 100.000", xlab = "Datum", 
-     xlim = c(date_start, Sys.Date() + 7), ylim = c(0, max(COV$I_rel, na.rm = TRUE)),
+     xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(COV$I_rel, na.rm = TRUE)),
      main = "COVID-19 aantal nieuwe patienten (RIVM-GGD)", type = "l", lty = 1, lwd=2, xaxt = "n")
 #lines(COV_test$I_pos_7d_rel  / 7 ~ COV_test$date, type = "l", lty = 2, lwd=2)
 lines(COV$I_3d_rel_limb  / 3 ~ COV$date, type = "l", lty = "9414", lwd=2)
@@ -229,8 +231,11 @@ polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(COV$I_rel / 3, na.rm = TRUE)/5) * 5, 5), lty = 3, 
+abline(h = seq(0, ceiling(max(COV$I_rel, na.rm = TRUE)/5) * 5, 5), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
+# points(c(pred_COV_rel$loess[7], pred_COV_rel$lo[7], pred_COV_rel$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 3), pch = "-", cex = 2, col = "black")
+# lines(c(pred_COV_rel$lo[7], pred_COV_rel$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = "black", lty = 2)
+# text(pred_COV_rel$loess[7] ~ as.Date(max(COV$date) + 12), labels = ceiling(pred_COV_rel$loess[7] / 50) * 50, col = "black", font = 1, cex = 0.6)
 legend("topleft", inset = 0.05, col=c(1, 1), lty=c(NA, "solid", NA, "9414"), cex=0.6, pch=c(16, NA, 1, NA), 
        box.lty=1, legend=c("Gemeld aantal nationaal",
                            "Gemeld aantal nationaal (3-dagen gemiddelde)",
@@ -243,7 +248,7 @@ dev.off()
 png("Figures/Perc_test_pos_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV_test$prop_pos * 100 ~ COV_test$date, ylab = "%", xlab = "Datum", xlim = c(date_start, Sys.Date() + 7),
+plot(COV_test$prop_pos * 100 ~ COV_test$date, ylab = "%", xlab = "Datum", xlim = c(date_start, Sys.Date() + 10),
      main = "COVID-19 percentage positieve testen (RIVM-GGD)", type = "l", lwd = 2, xaxt = "n")
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(0.05 * 100, 0.05 * 100, 0.1 * 100, 0.1 * 100), 
@@ -263,7 +268,7 @@ dev.off()
 png("Figures/R0_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(R0$R ~ R0$date, ylab = "R", xlab = "Datum", xlim = c(date_start, Sys.Date() + 7),
+plot(R0$R ~ R0$date, ylab = "R", xlab = "Datum", xlim = c(date_start, Sys.Date() + 10),
      ylim = c(0, 2), main = "COVID-19 reproductie index (Dashboard COVID-19)",  type = "l", lwd = 2, xaxt = "n")
 polygon(c(R0$date, rev(R0$date)), c(R0$Rmin, rev(R0$Rmax)), 
         col = adjustcolor("black", alpha.f = 0.3), border = NA)
@@ -285,7 +290,7 @@ dev.off()
 png("Figures/Opnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Hosp$I_3d / 3 ~ Hosp$date, ylab = "Incidentie/dag", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+plot(Hosp$I_3d / 3 ~ Hosp$date, ylab = "Incidentie/dag", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10),
      ylim = c(0, max(Hosp$I, na.rm = TRUE)), main = "COVID-19 ziekenhuisopnames exclusief IC (NICE)", type = "l", lwd = 2, xaxt = "n")
 points(Hosp$I ~ Hosp$date, cex = 0.6, pch = 16)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
@@ -316,7 +321,7 @@ png("Figures/ICopnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(IC$I_3d / 3 ~ IC$date, ylab = "Incidentie/dag", xlab = "Datum", 
-     lwd = 2, xlim = c(date_start, Sys.Date() + 7), ylim = c(0, max(IC$I, na.rm = TRUE)),
+     lwd = 2, xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(IC$I, na.rm = TRUE)),
      main = "COVID-19 IC opnames (NICE)", type = "l", lty = 1, xaxt = "n")
 points(IC$I ~ IC$date, cex = 0.6, pch = 16)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
@@ -347,7 +352,7 @@ png("Figures/Verpleeghuislocaties_NL.png", width = 1000, height = 600, pointsize
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Nurs$I_3d / 3 ~ Nurs$date, ylab = "Aantal nieuwe locaties met minimaal 1 besmette bewoner", xlab = "Datum", 
-     xlim = c(date_start, Sys.Date() + 7), ylim = c(0, max(Nurs$I, na.rm = TRUE)), 
+     xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(Nurs$I, na.rm = TRUE)), 
      main = "COVID-19 verpleeghuislocaties (Dashboard COVID-19)", type = "l", lwd = 2, xaxt = "n")
 points(Nurs$I ~ Nurs$date, cex = 0.6, pch = 16)
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
@@ -366,7 +371,7 @@ png("Figures/Sterfte_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Death$I_3d / 3 ~ Death$date, ylab = "Incidentie/dag", xlab = "Datum",
-     xlim = c(date_start, Sys.Date() + 7), ylim = c(0, max(Death$I, na.rm = TRUE)),  
+     xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(Death$I, na.rm = TRUE)),  
      main = "COVID-19 sterfte (RIVM-GGD)", type = "l", lwd = 2, xaxt = "n")
 lines(Death$I_3d_limb / 3 ~ Death$date, type = "l", lty = "9414")
 points(Death$I ~ Death$date, cex = 0.6, pch = 16)
@@ -390,7 +395,7 @@ dev.off()
 png("Figures/Incidentie_INT_per100000.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV$I_7d_rel ~ COV$date, ylab = "Incidentie/week per 100.000", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+plot(COV$I_7d_rel ~ COV$date, ylab = "Incidentie/week per 100.000", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10),
      ylim = c(0, ceiling(max(Int$I_7d_rel, na.rm = TRUE)/100) * 100), main = "COVID-19 aantal nieuwe gemelde patienten", type = "l", col = "black", lwd = 4, xaxt = "n")
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(50, 50, 150, 150), 
@@ -431,7 +436,7 @@ dev.off()
 png("Figures/Perc_test_pos_INT.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV_test$prop_pos * 100 ~ COV_test$date, ylab = "%", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+plot(COV_test$prop_pos * 100 ~ COV_test$date, ylab = "%", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10),
      ylim = c(0, ceiling(max(Int$prop_test_pos * 100, na.rm = TRUE)/5) * 5), main = "COVID-19 percentage positieve testen", type = "l", col = "black", lwd = 4, xaxt = "n")
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
           date_start - 30), c(5, 5, 10, 10),
@@ -469,7 +474,7 @@ dev.off()
 png("Figures/Stringency_index_INT.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Int[Int$iso == levels(Int$iso)[13], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[13], ]$date, ylab = "Index", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
+plot(Int[Int$iso == levels(Int$iso)[13], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[13], ]$date, ylab = "Index", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10),
      ylim = c(0, 100), main = "Government Stringency Index - composite of nine response metrics", type = "l", col = "black", lwd = 4, xaxt = "n")
 lines(Int[Int$iso == levels(Int$iso)[1], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[1], ]$date, type = "l", col = palette.colors(palette = "Set 1")[1], lwd = 2)
 lines(Int[Int$iso == levels(Int$iso)[2], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[2], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 2)
