@@ -199,7 +199,7 @@ abline(h = seq(0, ceiling(max(COV$I, na.rm = TRUE)/2000) * 2000, 2000), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 points(c(pred_COV$loess[7], pred_COV$lo[7], pred_COV$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 3), pch = "-", cex = 2, col = "black")
 lines(c(pred_COV$lo[7], pred_COV$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = "black", lty = 2)
-text(pred_COV$loess[7] ~ as.Date(max(COV$date) + 10), labels = ceiling(pred_COV$loess[7] / 50) * 50, col = "black", font = 1)
+text(pred_COV$loess[7] ~ as.Date(max(COV$date) + 10), labels = ceiling(pred_COV$loess[7] / 50) * 50, col = "black", font = 1, cex = 0.6)
 legend("topleft", inset = 0.05, col=c(1, 1), lty=c(NA, "solid"), cex=0.6, pch=c(16, NA), box.lty=1, 
        legend=c("Gemeld aantal",
                 "Gemeld aantal (3-dagen gemiddelde)"))
@@ -286,7 +286,7 @@ png("Figures/Opnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Hosp$I_3d / 3 ~ Hosp$date, ylab = "Incidentie/dag", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 7),
-     ylim = c(0, ceiling(max(Hosp$I_3d / 3, na.rm = TRUE)/50) * 50), main = "COVID-19 ziekenhuisopnames (exclusief IC) in Nederland (NICE)", type = "l", lwd = 2, xaxt = "n")
+     ylim = c(0, ceiling(max(Hosp$I_3d / 3, na.rm = TRUE)/50) * 50), main = "COVID-19 ziekenhuisopnames exclusief IC (NICE)", type = "l", lwd = 2, xaxt = "n")
 points(Hosp$I ~ Hosp$date, cex = 0.6, pch = 16)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(0, 0, 40, 40), 
@@ -304,7 +304,7 @@ abline(h = seq(0, ceiling(max(Hosp$I_3d / 3, na.rm = TRUE)/50) * 50, 50), lty = 
        col = adjustcolor("grey", alpha.f = 0.7))
 points(c(pred_Hosp$loess[7], pred_Hosp$lo[7], pred_Hosp$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 3), pch = "-", cex = 2, col = "black")
 lines(c(pred_Hosp$lo[7], pred_Hosp$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = "black", lty = 2)
-text(pred_Hosp$loess[7] ~ as.Date(max(COV$date) + 10), labels = ceiling(pred_Hosp$loess[7] / 10) * 10, col = "black", font = 1)
+text(pred_Hosp$loess[7] ~ as.Date(max(COV$date) + 10), labels = ceiling(pred_Hosp$loess[7] / 10) * 10, col = "black", font = 1, cex = 0.6)
 legend("topleft", inset = 0.05, col=c(1, 1), lty=c(NA, "solid"), cex=0.6, pch=c(16, NA), box.lty=1, 
        legend=c("Aantal",
                 "Aantal (3-dagen gemiddelde)"))
@@ -317,7 +317,7 @@ par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(IC$I_3d / 3 ~ IC$date, ylab = "Incidentie/dag", xlab = "Datum", 
      lwd = 2, xlim = c(date_start, Sys.Date() + 7),
-     main = "COVID-19 IC opnames in Nederland  (NICE)", type = "l", lty = 1, xaxt = "n")
+     main = "COVID-19 IC opnames (NICE)", type = "l", lty = 1, xaxt = "n")
 points(IC$I ~ IC$date, cex = 0.6, pch = 16)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(0, 0, 10, 10), 
@@ -335,7 +335,7 @@ abline(h = seq(0, ceiling(max(IC$I_3d / 3, na.rm = TRUE)/10) * 10, 10), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 points(c(pred_IC$loess[7], pred_IC$lo[7], pred_IC$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 3), pch = "-", cex = 2, col = "black")
 lines(c(pred_IC$lo[7], pred_IC$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = "black", lty = 2)
-text(pred_IC$loess[7] ~ as.Date(max(COV$date) + 10), labels = ceiling(pred_IC$loess[7] / 5) * 5, col = "black", font = 1)
+text(pred_IC$loess[7] ~ as.Date(max(COV$date) + 10), labels = ceiling(pred_IC$loess[7] / 5) * 5, col = "black", font = 1, cex = 0.6)
 legend("topleft", inset = 0.05, col=c(1, 1), lty=c(NA, "solid"), cex=0.6, pch=c(16, NA), box.lty=1, 
        legend=c("Aantal",
                 "Aantal (3-dagen gemiddelde)"))
@@ -346,7 +346,7 @@ dev.off()
 png("Figures/Verpleeghuislocaties_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Nurs$I_3d / 3 ~ Nurs$date, ylab = "Aantal nieuwe locaties met minimaal 1 besmette bewoner)", xlab = "Datum", 
+plot(Nurs$I_3d / 3 ~ Nurs$date, ylab = "Aantal nieuwe locaties met minimaal 1 besmette bewoner", xlab = "Datum", 
      xlim = c(date_start, Sys.Date() + 7),
      main = "COVID-19 verpleeghuislocaties (Dashboard COVID-19)", type = "l", lwd = 2, xaxt = "n")
 points(Nurs$I ~ Nurs$date, cex = 0.6, pch = 16)
