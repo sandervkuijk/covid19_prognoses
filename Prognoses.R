@@ -8,7 +8,6 @@ library(rms)
 library(forecast)
 library(zoo)
 library(tidyverse)
-library(quantmod)
 source("f_trend.R")
 
 palette(c("black", "white"))
@@ -195,8 +194,9 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(COV$I, na.rm = TRUE)/2000) * 2000, 2000), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-points(pred_COV$loess[7] ~ as.Date(max(COV$date) + 7), pch = 16, cex = 0.6, col = "blue")
-lines(c(pred_COV$lo[7], pred_COV$up[7]) ~ c(as.Date(max(COV$date) + 7), as.Date(max(COV$date) + 7)), lwd = 1, col = "blue")
+points(c(pred_COV$loess[7], pred_COV$lo[7], pred_COV$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 3), pch = "-", cex = 2, col = "black")
+lines(c(pred_COV$lo[7], pred_COV$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = "black", lty = 2)
+text(pred_COV$loess[7] ~ as.Date(max(COV$date) + 10), labels = ceiling(pred_COV$loess[7] / 50) * 50, col = "black", font = 1)
 
 dev.off()
 
@@ -291,8 +291,9 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(Hosp$I_3d / 3, na.rm = TRUE)/50) * 50, 50), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-points(pred_Hosp$loess[7] ~ as.Date(max(Hosp$date) + 7), pch = 16, cex = 0.6, col = "blue")
-lines(c(pred_Hosp$lo[7], pred_Hosp$up[7]) ~ c(as.Date(max(Hosp$date) + 7), as.Date(max(Hosp$date) + 7)), lwd = 1, col = "blue")
+points(c(pred_Hosp$loess[7], pred_Hosp$lo[7], pred_Hosp$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 3), pch = "-", cex = 2, col = "black")
+lines(c(pred_Hosp$lo[7], pred_Hosp$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = "black", lty = 2)
+text(pred_Hosp$loess[7] ~ as.Date(max(COV$date) + 10), labels = ceiling(pred_Hosp$loess[7] / 10) * 10, col = "black", font = 1)
 
 dev.off()
 
@@ -316,8 +317,9 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(IC$I_3d / 3, na.rm = TRUE)/10) * 10, 10), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-points(pred_IC$loess[7] ~ as.Date(max(IC$date) + 7), pch = 16, cex = 0.6, col = "blue")
-lines(c(pred_IC$lo[7], pred_IC$up[7]) ~ c(as.Date(max(IC$date) + 7), as.Date(max(IC$date) + 7)), lwd = 1, col = "blue")
+points(c(pred_IC$loess[7], pred_IC$lo[7], pred_IC$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 3), pch = "-", cex = 2, col = "black")
+lines(c(pred_IC$lo[7], pred_IC$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = "black", lty = 2)
+text(pred_IC$loess[7] ~ as.Date(max(COV$date) + 10), labels = ceiling(pred_IC$loess[7] / 5) * 5, col = "black", font = 1)
 
 dev.off()
 
