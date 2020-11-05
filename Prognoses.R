@@ -9,7 +9,9 @@ library(forecast)
 library(zoo)
 library(tidyverse)
 library(rjson)
+library(pdftools)
 source("f_trend.R")
+source("f_pdf_rivm_test.R")
 
 palette(c("black", "white"))
 date_start <- as.Date("2020-6-1") #as.Date("2020-3-14") #minimal 1 day after RIVM data starts 
@@ -38,6 +40,8 @@ dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cum
 # Wellicht onderstaande R data gebruiken direct van RIVM (ipv obv github)
 # dat_RIVM_R <- fromJSON(file = "https://data.rivm.nl/covid-19/COVID-19_reproductiegetal.json",simplify = TRUE)
 # dat_RIVM_R <- dat_RIVM_R %>% map(as.data.table) %>% rbindlist(fill = TRUE)
+dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2020-11/COVID-19_WebSite_rapport_wekelijks_20201103_1216.pdf")
+# https://www.rivm.nl/documenten/wekelijkse-update-epidemiologische-situatie-covid-19-in-nederland
 
 dat_RIVM_test <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-misc/data-test/RIVM_NL_test_latest.csv?raw=true")
 dat_RIVM_R <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-reproduction/RIVM_NL_reproduction_index.csv?raw=true")
