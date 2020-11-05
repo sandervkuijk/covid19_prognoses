@@ -8,6 +8,7 @@ library(rms)
 library(forecast)
 library(zoo)
 library(tidyverse)
+library(rjson)
 source("f_trend.R")
 
 palette(c("black", "white"))
@@ -15,23 +16,33 @@ date_start <- as.Date("2020-6-1") #as.Date("2020-3-14") #minimal 1 day after RIV
 lbls <- format(seq(date_start, Sys.Date() + 30, by = "2 week"), "%e %b")
 
 ###### RETRIEVE AND MANIPULATE DATA ######
-#dat_NICE <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-ic/data-nice/NICE_IC_wide_latest.csv?raw=true") 
-dat_NICE_IC_int <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/new-intake/",simplify = TRUE)
-dat_NICE_IC_int <- dat_NICE_IC_int %>% map(as.data.table) %>% rbindlist(fill=TRUE)
-dat_NICE_IC_int <- as.data.frame(t(dat_NICE_IC_int))[, -3]
-dat_NICE_Hosp_int <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/new-intake/",simplify = TRUE)
-dat_NICE_Hosp_int <- dat_NICE_Hosp_int %>% map(as.data.table) %>% rbindlist(fill = TRUE)
-dat_NICE_Hosp_int <- as.data.frame(t(dat_NICE_Hosp_int))[, -3]
-dat_NICE_IC_C <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/intake-cumulative",simplify = TRUE)
+dat_NICE_IC_C <- fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/intake-cumulative",simplify = TRUE)
 dat_NICE_IC_C <- dat_NICE_IC_C %>% map(as.data.table) %>% rbindlist(fill = TRUE)
-dat_NICE_Hosp_C <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/intake-cumulative/",simplify = TRUE)
+dat_NICE_IC_I <- fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/new-intake/",simplify = TRUE)
+dat_NICE_IC_I <- dat_NICE_IC_I %>% map(as.data.table) %>% rbindlist(fill=TRUE)
+dat_NICE_IC_I <- as.data.frame(t(dat_NICE_IC_I))[, -3]
+dat_NICE_IC_B <- fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/intake-count/",simplify = TRUE)
+dat_NICE_IC_B <- dat_NICE_IC_B %>% map(as.data.table) %>% rbindlist(fill = TRUE)
+dat_NICE_Hosp_C <- fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/intake-cumulative/",simplify = TRUE)
 dat_NICE_Hosp_C <- dat_NICE_Hosp_C %>% map(as.data.table) %>% rbindlist(fill = TRUE)
+dat_NICE_Hosp_I <- fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/new-intake/",simplify = TRUE)
+dat_NICE_Hosp_I <- dat_NICE_Hosp_I %>% map(as.data.table) %>% rbindlist(fill = TRUE)
+dat_NICE_Hosp_I <- as.data.frame(t(dat_NICE_Hosp_I))[, -3]
+dat_NICE_Hosp_B <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/intake-count/",simplify = TRUE)
+dat_NICE_Hosp_B <- dat_NICE_Hosp_B %>% map(as.data.table) %>% rbindlist(fill = TRUE)
+
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
+# Wellicht onderstaande R data gebruiken direct van RIVM (ipv obv github)
+# dat_RIVM_R <- fromJSON(file = "https://data.rivm.nl/covid-19/COVID-19_reproductiegetal.json",simplify = TRUE)
+# dat_RIVM_R <- dat_RIVM_R %>% map(as.data.table) %>% rbindlist(fill = TRUE)
+
 dat_RIVM_test <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-misc/data-test/RIVM_NL_test_latest.csv?raw=true")
 dat_RIVM_R <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-reproduction/RIVM_NL_reproduction_index.csv?raw=true")
 dat_RIVM_nursery <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-nursery/data-nursery_homes/RIVM_NL_nursery_counts.csv?raw=true")
+
 dat_CBS <- fread("https://opendata.cbs.nl/CsvDownload/csv/83474NED/UntypedDataSet?dl=41CFE")
 dat_CBS_prov <- fread("https://opendata.cbs.nl/CsvDownload/csv/37230ned/UntypedDataSet?dl=433DC")
+
 dat_OWiD <- fread("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv?raw=true") #https://github.com/owid/covid-19-data/tree/master/public/data
 # OWiD codebook: https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-codebook.csv
 
@@ -45,92 +56,114 @@ dat_OWiD <- fread("https://raw.githubusercontent.com/owid/covid-19-data/master/p
 # Sci Data 7, 345 (2020). https://doi.org/10.1038/s41597-020-00688-8
 
 # Data manipulation
-IC <- aggregate(formula = value ~ date, FUN = sum, data = dat_NICE_IC_C)
 COV <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, data = dat_RIVM)
 COV_limb <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, 
                       data = subset(dat_RIVM, Province == "Limburg"))
-Hosp <- aggregate(formula = value ~ date, FUN = sum, data = dat_NICE_Hosp_C)
-Hosp_limb <- aggregate(formula = Hospital_admission ~ Date_of_report, FUN = sum, 
-                       data = subset(dat_RIVM, Province == "Limburg"))
 Death <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, data = dat_RIVM)
 Death_limb <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, 
                         data = subset(dat_RIVM, Province == "Limburg"))
+
 dat_RIVM_test$Type <- as.factor(dat_RIVM_test$Type)
 dat_RIVM_R$Type <- as.factor(dat_RIVM_R$Type)
-dat_CBS_prov$`Bevolking aan het einde van de periode (aantal)` <- as.numeric(dat_CBS_prov$`Bevolking aan het einde van de periode (aantal)`) 
 
 # Create dataframes 
-# I = incidentie, C = cumulatieve incidentie, A = huidig aantal, _rel = per 100,000
+# I = incidentie, C = cumulatieve incidentie, B = bezetting, A = huidig aantal, _rel = per 100,000
+
+# Populatie
+Population <- data.frame(NLD = tail(as.numeric(dat_CBS$`Bevolking aan het eind van de periode (aantal)`), n=1), 
+                         Limb = tail(as.numeric(dat_CBS_prov[dat_CBS_prov$`Regio's` == "Limburg (PV)"]$'Bevolking aan het einde van de periode (aantal)'), n=1)
+)
+  
+# Gemelde patienten
 COV <- data.frame(C = COV$Total_reported,
                   I = pmax(COV$Total_reported - shift(COV$Total_reported, n=1, fill=0, type="lag"), 0),
                   C_limb = COV_limb$Total_reported,
                   I_limb = pmax(COV_limb$Total_reported - shift(COV_limb$Total_reported, n=1, fill=0, type="lag"), 0),
                   date = as.Date(COV$Date_of_report)
 )
-COV$I_rel <- COV$I/tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1) * 100000
-COV$I_rel_limb <- COV$I_limb/tail(dat_CBS_prov[dat_CBS_prov$`Regio's` == "Limburg (PV)"]$'Bevolking aan het einde van de periode (aantal)', n=1) * 100000
-COV$I_3d <- rollsumr(COV$I, k = 3, fill = NA)
-COV$I_3d_limb <- rollsumr(COV$I_limb, k = 3, fill = NA)
-COV$I_3d_rel <- COV$I_3d/tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1) * 100000
-COV$I_3d_rel_limb <- COV$I_3d_limb/tail(dat_CBS_prov[dat_CBS_prov$`Regio's` == "Limburg (PV)"]$'Bevolking aan het einde van de periode (aantal)', n=1) * 100000
-COV$I_7d <- rollsumr(COV$I, k = 7, fill = NA)
-COV$I_7d_limb <- rollsumr(COV$I_limb, k = 7, fill = NA)
-COV$I_7d_rel <- COV$I_7d/tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1) * 100000
-COV$I_7d_rel_limb <- COV$I_7d_limb/tail(dat_CBS_prov[dat_CBS_prov$`Regio's` == "Limburg (PV)"]$'Bevolking aan het einde van de periode (aantal)', n=1) * 100000
+COV <- data.frame(COV,
+                  I_rel = COV$I / Population$NLD * 100000,
+                  I_rel_limb = COV$I_limb/Population$Limb * 100000,
+                  I_3d = rollsumr(COV$I, k = 3, fill = NA),
+                  I_3d_limb = rollsumr(COV$I_limb, k = 3, fill = NA),
+                  I_3d_rel = rollsumr(COV$I, k = 3, fill = NA) / Population$NLD * 100000,
+                  I_3d_rel_limb = rollsumr(COV$I_limb, k = 3, fill = NA) / Population$Limb * 100000,
+                  I_7d = rollsumr(COV$I, k = 7, fill = NA),
+                  I_7d_limb = rollsumr(COV$I_limb, k = 7, fill = NA),
+                  I_7d_rel = rollsumr(COV$I, k = 7, fill = NA) / Population$NLD * 100000,
+                  I_7d_rel_limb = rollsumr(COV$I_limb, k = 7, fill = NA) / Population$Limb * 100000
+)
 COV <- subset(COV, COV$date >= date_start) # Select data from start date 
 
 COV_test <- data.frame(I_pos_7d = dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM_test$Type)[1], ]$Aantal,
                        I_total_7d = dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM_test$Type)[2], ]$Aantal,
                        prop_pos = dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM_test$Type)[1], ]$Aantal / dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM_test$Type)[2], ]$Aantal,
                        date = as.Date(dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM_test$Type)[1], ]$EindDatum),
-                       week = dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM_test$Type)[1], ]$Week
-) # Separate dataframe as unit is week (not day as in COV)
-COV_test$I_pos_7d_rel <- COV_test$I_pos_7d/tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1) * 100000
+                       week = dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM_test$Type)[1], ]$Week,
+                       I_pos_7d_rel = dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM_test$Type)[1], ]$Aantal / Population$NLD * 100000
+) 
 COV_test <- subset(COV_test, COV_test$date >= date_start)
 
 R0 <- data.frame(R = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[3], ]$Waarde,
                  Rmin = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[2], ]$Waarde,
                  Rmax = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[1], ]$Waarde,
                  date = as.Date(dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[3], ]$Datum)
-) # Separate dataframe due to difference in dates 
+) 
 R0 <- subset(R0, R0$date >= date_start)
 
-Hosp <- data.frame(C = Hosp$value,
-                   I = unlist(dat_NICE_Hosp_int[, 2]) + unlist(dat_NICE_Hosp_int[, 3]), #pmax(Hosp$value - shift(Hosp$value, n=1, fill=0, type="lag"), 0),
-                   date = as.Date(Hosp$date)
+# Ziekenhuisopnames (excl IC)
+Hosp <- data.frame(C = unlist(dat_NICE_Hosp_C[, 2]),
+                   I = unlist(dat_NICE_Hosp_I[, 2]) + unlist(dat_NICE_Hosp_I[, 3]), 
+                   B = unlist(dat_NICE_Hosp_B[, 2]),
+                   date = as.Date(unlist(dat_NICE_Hosp_I[, 1]))
 )
-Hosp$I_3d <- rollsumr(Hosp$I, k = 3, fill = NA)
+Hosp <- data.frame(Hosp,
+                   I_3d = rollsumr(Hosp$I, k = 3, fill = NA),
+                   B_3d = rollsumr(Hosp$B, k = 3, fill = NA)
+                   
+)
 Hosp <- subset(Hosp, Hosp$date >= date_start) # Select data from start date 
 Hosp <- subset(Hosp, Hosp$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
-IC <- data.frame(C = IC$value,
-                 I = unlist(dat_NICE_IC_int[, 2]) + unlist(dat_NICE_IC_int[, 3]), #pmax(IC$value - shift(IC$value, n=1, fill=0, type="lag"), 0),
-                 date = as.Date(IC$date)
+# IC opnames 
+IC <- data.frame(C = unlist(dat_NICE_IC_C[, 2]),
+                 I = unlist(dat_NICE_IC_I[, 2]) + unlist(dat_NICE_IC_I[, 3]), 
+                 B = unlist(dat_NICE_IC_B[, 2]),
+                 date = as.Date(unlist(dat_NICE_IC_I[, 1]))
 )
-IC$I_3d <- rollsumr(IC$I, k = 3, fill = NA)
+IC <- data.frame(IC,
+                 I_3d = rollsumr(IC$I, k = 3, fill = NA),
+                 B_3d = rollsumr(IC$B, k = 3, fill = NA)
+)
 IC <- subset(IC, IC$date >= date_start) # Select data from start date 
 IC <- subset(IC, IC$date <= (Sys.Date() - 1)) # Remove data that are still being updated
 
-
+# Verpleeghuislocaties
 Nurs <- data.frame(A = dat_RIVM_nursery$Aantal,
                    I = dat_RIVM_nursery$NieuwAantal,
                    date = as.Date(dat_RIVM_nursery$Datum)
 )
-Nurs$I_3d <- rollsumr(Nurs$I, k = 3, fill = NA)
+Nurs <- data.frame(Nurs, 
+                   I_3d = rollsumr(Nurs$I, k = 3, fill = NA)
+)
 Nurs <- subset(Nurs, Nurs$date >= date_start) # Select data from start date 
 
+# Sterfte
 Death <- data.frame(C = Death$Deceased,
                     I = pmax(Death$Deceased - shift(Death$Deceased, n=1, fill=0, type="lag"), 0),
                     C_limb = Death_limb$Deceased,
                     I_limb = pmax(Death_limb$Deceased - shift(Death_limb$Deceased, n=1, fill=0, type="lag"), 0),
                     date = as.Date(Death$Date_of_report)
 )
-Death$I_3d <- rollsumr(Death$I, k = 3, fill = NA)
-Death$I_3d_limb <- rollsumr(Death$I_limb, k = 3, fill = NA)
-Death$I_7d <- rollsumr(Death$I, k = 7, fill = NA)
-Death$I_7d_limb <- rollsumr(Death$I_limb, k = 7, fill = NA)
+Death <- data.frame(Death, 
+                    I_3d = rollsumr(Death$I, k = 3, fill = NA),
+                    I_3d_limb = rollsumr(Death$I_limb, k = 3, fill = NA),
+                    I_7d = rollsumr(Death$I, k = 7, fill = NA),
+                    I_7d_limb = rollsumr(Death$I_limb, k = 7, fill = NA)
+)
 Death <- subset(Death, Death$date >= date_start) # Select data from start date 
 
+# Internationaal
 Int <- data.frame(continent = as.factor(dat_OWiD$continent),
                   iso = as.factor(dat_OWiD$iso_code),
                   country = as.factor(dat_OWiD$location),
@@ -151,18 +184,21 @@ Int <- subset(Int, Int$LE >= 80) # Select countries with life expectancy above o
 Int<- subset(Int, Int$population >= 1000000) # Select countries with population >= 1 mln 
 Int <- droplevels(Int)
 Int <- subset(Int, Int$date >= date_start - 14)
-Int$I_3d <- rollsumr(Int$I_COV, by = Int$country, k = 3, fill = NA)
-Int$I_3d_rel <- Int$I_3d/Int$population * 100000
-Int$I_7d <- rollsumr(Int$I_COV, by = Int$country, k = 7, fill = NA)
-Int$I_7d_rel <- Int$I_7d/Int$population * 100000
+Int <- data.frame(Int,
+                  I_3d = rollsumr(Int$I_COV, by = Int$country, k = 3, fill = NA),
+                  I_3d_rel = rollsumr(Int$I_COV, by = Int$country, k = 3, fill = NA) / Int$population * 100000,
+                  I_7d = rollsumr(Int$I_COV, by = Int$country, k = 7, fill = NA),
+                  I_7d_rel = rollsumr(Int$I_COV, by = Int$country, k = 7, fill = NA) / Int$population * 100000
+)
 Int <- subset(Int, Int$date >= date_start) # Select data from start date 
 
-rm(COV_limb, Hosp_limb, Death_limb) #clean workspace
+row.names(Hosp) <- row.names(IC) <- NULL
+rm(COV_limb, Death_limb) #clean workspace
 
 ###### TRENDLIJN ######
 pred_COV <- f_trend(x = COV$I, time = 7, span = 0.25)$pred
 pred_COV_rel <- pred_COV
-pred_COV_rel[, 2:9] <- pred_COV_rel[, 2:9] /tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1) * 100000
+pred_COV_rel[, -1] <- pred_COV_rel[, -1] / Population$NLD * 100000
 pred_Hosp <- f_trend(x = Hosp$I, time = 7, span = 0.25)$pred
 pred_IC <- f_trend(x = IC$I, time = 7, span = 0.25)$pred
 
@@ -184,7 +220,7 @@ par(mar = c(5.1, 4.1, 4.1, 1.1))
 plot(COV$I_3d / 3 ~ COV$date, ylab = "Incidentie/dag", xlab = "Datum", lwd = 2, xlim = c(date_start, Sys.Date() + 10),
      main = "COVID-19 aantal nieuwe gemelde patienten  (RIVM-GGD)", type = "l", xaxt = "n", ylim = c(0, max(COV$I, na.rm = TRUE)))
 points(COV$I ~ COV$date, cex = 0.6, pch = 16)
-factor <- 1 / 7 / (100000 / tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1)) 
+factor <- 1 / 7 / (100000 / Population$NLD) 
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(50 * factor, 50 * factor, 150 * factor, 150 * factor), 
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
