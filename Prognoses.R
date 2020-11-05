@@ -31,6 +31,9 @@ dat_NICE_Hosp_I <- as.data.frame(t(dat_NICE_Hosp_I))[, -3]
 dat_NICE_Hosp_B <- rjson::fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/zkh/intake-count/",simplify = TRUE)
 dat_NICE_Hosp_B <- dat_NICE_Hosp_B %>% map(as.data.table) %>% rbindlist(fill = TRUE)
 
+dat_LCPS <- data.frame(fread("https://lcps.nu/wp-content/uploads/covid-19.csv"))
+# Uitleg LCPS data: https://lcps.nu/datafeed/
+
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
 # Wellicht onderstaande R data gebruiken direct van RIVM (ipv obv github)
 # dat_RIVM_R <- fromJSON(file = "https://data.rivm.nl/covid-19/COVID-19_reproductiegetal.json",simplify = TRUE)
@@ -40,11 +43,11 @@ dat_RIVM_test <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/da
 dat_RIVM_R <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-reproduction/RIVM_NL_reproduction_index.csv?raw=true")
 dat_RIVM_nursery <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-nursery/data-nursery_homes/RIVM_NL_nursery_counts.csv?raw=true")
 
-dat_CBS <- fread("https://opendata.cbs.nl/CsvDownload/csv/83474NED/UntypedDataSet?dl=41CFE")
-dat_CBS_prov <- fread("https://opendata.cbs.nl/CsvDownload/csv/37230ned/UntypedDataSet?dl=433DC")
-
 dat_OWiD <- fread("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv?raw=true") #https://github.com/owid/covid-19-data/tree/master/public/data
 # OWiD codebook: https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-codebook.csv
+
+dat_CBS <- fread("https://opendata.cbs.nl/CsvDownload/csv/83474NED/UntypedDataSet?dl=41CFE")
+dat_CBS_prov <- fread("https://opendata.cbs.nl/CsvDownload/csv/37230ned/UntypedDataSet?dl=433DC")
 
 # Data partly from:
 # De Bruin, J. (2020). Novel Coronavirus (COVID-19) Cases in The Netherlands
@@ -62,6 +65,9 @@ COV_limb <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum,
 Death <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, data = dat_RIVM)
 Death_limb <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, 
                         data = subset(dat_RIVM, Province == "Limburg"))
+
+dat_LCPS$Datum <- as.Date(dat_LCPS$Datum, tryFormats = c("%d-%m-%Y"))
+dat_LCPS <- dat_LCPS[order(dat_LCPS$Datum), ]
 
 dat_RIVM_test$Type <- as.factor(dat_RIVM_test$Type)
 dat_RIVM_R$Type <- as.factor(dat_RIVM_R$Type)
@@ -102,16 +108,17 @@ COV_test <- data.frame(I_pos_7d = dat_RIVM_test[dat_RIVM_test$Type==levels(dat_R
                        week = dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM_test$Type)[1], ]$Week,
                        I_pos_7d_rel = dat_RIVM_test[dat_RIVM_test$Type==levels(dat_RIVM_test$Type)[1], ]$Aantal / Population$NLD * 100000
 ) 
-COV_test <- subset(COV_test, COV_test$date >= date_start)
+COV_test <- subset(COV_test, COV_test$date >= date_start) # Select data from start date 
 
-R0 <- data.frame(R = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[3], ]$Waarde,
+Rt <- data.frame(R = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[3], ]$Waarde,
                  Rmin = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[2], ]$Waarde,
                  Rmax = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[1], ]$Waarde,
                  date = as.Date(dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[3], ]$Datum)
 ) 
-R0 <- subset(R0, R0$date >= date_start)
+Rt <- subset(Rt, Rt$date >= date_start) # Select data from start date 
 
 # Ziekenhuisopnames (excl IC)
+# NICE
 Hosp <- data.frame(C = unlist(dat_NICE_Hosp_C[, 2]),
                    I = unlist(dat_NICE_Hosp_I[, 2]) + unlist(dat_NICE_Hosp_I[, 3]), 
                    B = unlist(dat_NICE_Hosp_B[, 2]),
@@ -125,7 +132,16 @@ Hosp <- data.frame(Hosp,
 Hosp <- subset(Hosp, Hosp$date >= date_start) # Select data from start date 
 Hosp <- subset(Hosp, Hosp$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
+# LCPS (voor bezetting)
+Hosp_LCPS <- data.frame(B = dat_LCPS$Kliniek_Bedden,
+                        date = dat_LCPS$Datum,
+                        B_3d = rollsumr(dat_LCPS$Kliniek_Bedden, k = 3, fill = NA)
+)
+Hosp_LCPS <- subset(Hosp_LCPS, Hosp_LCPS$date >= date_start) # Select data from start date 
+Hosp_LCPS <- subset(Hosp_LCPS, Hosp_LCPS$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
+
 # IC opnames 
+# NICE
 IC <- data.frame(C = unlist(dat_NICE_IC_C[, 2]),
                  I = unlist(dat_NICE_IC_I[, 2]) + unlist(dat_NICE_IC_I[, 3]), 
                  B = unlist(dat_NICE_IC_B[, 2]),
@@ -137,6 +153,18 @@ IC <- data.frame(IC,
 )
 IC <- subset(IC, IC$date >= date_start) # Select data from start date 
 IC <- subset(IC, IC$date <= (Sys.Date() - 1)) # Remove data that are still being updated
+
+# LCPS (voor bezetting)
+IC_LCPS <- data.frame(B = dat_LCPS$IC_Bedden_COVID,
+                      B_non_covid = dat_LCPS$IC_Bedden_Non_COVID,
+                      B_total = dat_LCPS$IC_Bedden_COVID + dat_LCPS$IC_Bedden_Non_COVID,
+                      date = dat_LCPS$Datum,
+                      B_3d = rollsumr(dat_LCPS$IC_Bedden_COVID, k = 3, fill = NA),
+                      B_non_covid_3d = rollsumr(dat_LCPS$IC_Bedden_Non_COVID, k = 3, fill = NA),
+                      B_total_3d = rollsumr(dat_LCPS$IC_Bedden_COVID + dat_LCPS$IC_Bedden_Non_COVID, k = 3, fill = NA)
+)
+IC_LCPS <- subset(IC_LCPS, IC_LCPS$date >= date_start) # Select data from start date 
+IC_LCPS <- subset(IC_LCPS, IC_LCPS$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
 # Verpleeghuislocaties
 Nurs <- data.frame(A = dat_RIVM_nursery$Aantal,
@@ -192,15 +220,24 @@ Int <- data.frame(Int,
 )
 Int <- subset(Int, Int$date >= date_start) # Select data from start date 
 
-row.names(Hosp) <- row.names(IC) <- NULL
+row.names(Hosp) <- row.names(IC) <- row.names(dat_LCPS) <- NULL
 rm(COV_limb, Death_limb) #clean workspace
 
 ###### TRENDLIJN ######
 pred_COV <- f_trend(x = COV$I, time = 7, span = 0.25)$pred
 pred_COV_rel <- pred_COV
 pred_COV_rel[, -1] <- pred_COV_rel[, -1] / Population$NLD * 100000
+pred_COV_limb <- f_trend(x = COV$I_limb, time = 7, span = 0.25)$pred
+pred_COV_rel_limb <- pred_COV_limb
+pred_COV_rel_limb[, -1] <- pred_COV_rel_limb[, -1] / Population$NLD * 100000
 pred_Hosp <- f_trend(x = Hosp$I, time = 7, span = 0.25)$pred
+pred_Hosp_B <- f_trend(x = Hosp$B, time = 7, span = 0.25)$pred
 pred_IC <- f_trend(x = IC$I, time = 7, span = 0.25)$pred
+pred_IC_B <- f_trend(x = IC$B, time = 7, span = 0.25)$pred
+pred_IC_LCPS_B <- f_trend(x = IC_LCPS$B, time = 7, span = 0.25)$pred
+pred_IC_LCPS_B_non_covid <- f_trend(x = IC_LCPS$B_non_covid, time = 7, span = 0.25)$pred
+pred_IC_LCPS_B_total <- pred_IC_LCPS_B
+pred_IC_LCPS_B_total[, -1] <- pred_IC_LCPS_B_total[, -1] + pred_IC_LCPS_B_non_covid[, -1]
 
 ###### FIGUREN ###### 
 # Singaalwaardes obv https://www.rijksoverheid.nl/documenten/publicaties/2020/10/13/risiconiveaus-en-maatregelen-covid-19
@@ -301,12 +338,12 @@ abline(h = seq(0, ceiling(max(COV_test$prop_pos * 100, na.rm = TRUE)/2) * 2, 2),
 dev.off()
 
 # Reproductie index
-png("Figures/R0_NL.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/Rt_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(R0$R ~ R0$date, ylab = "R", xlab = "Datum", xlim = c(date_start, Sys.Date() + 10),
+plot(Rt$R ~ Rt$date, ylab = "R", xlab = "Datum", xlim = c(date_start, Sys.Date() + 10),
      ylim = c(0, 2), main = "COVID-19 reproductie index (Dashboard COVID-19)",  type = "l", lwd = 2, xaxt = "n")
-polygon(c(R0$date, rev(R0$date)), c(R0$Rmin, rev(R0$Rmax)), 
+polygon(c(Rt$date, rev(Rt$date)), c(Rt$Rmin, rev(Rt$Rmax)), 
         col = adjustcolor("black", alpha.f = 0.3), border = NA)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, # circa 1.0 aangenomen als 0.98 - 1.02
           date_start - 30), c(0.98, 0.98, 1.02, 1.02), 
@@ -317,7 +354,7 @@ polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(R0$Rmax, na.rm = TRUE)/0.5) * 0.5, 0.5), lty = 3, 
+abline(h = seq(0, ceiling(max(Rt$Rmax, na.rm = TRUE)/0.5) * 0.5, 0.5), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 
 dev.off()

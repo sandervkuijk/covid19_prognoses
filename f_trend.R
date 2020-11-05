@@ -36,7 +36,7 @@ pred <- data.frame(time = time_pred,
 )
                    
 # visualise fit
-plot(x ~ dag, xlim = c(0, length(dag) + time),  ylim = c(0, max(pred_up)))
+plot(x ~ dag, xlim = c(0, length(dag) + time),  ylim = c(0, max(pred[, -1], x)))
 lines(loess$x, loess$fitted, col = "red")
 lines(time_pred, pred_loess, col = "red", lty= 3)
 lines(loess$x, arima$fitted, col = "blue")
