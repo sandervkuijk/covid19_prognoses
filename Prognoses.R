@@ -37,28 +37,21 @@ dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2020-1
 # vergelijk dat_RIVM_test (laatste rij) met https://coronadashboard.rijksoverheid.nl/landelijk/positief-geteste-mensen
 
 dat_RIVM_nursery <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-nursery/data-nursery_homes/RIVM_NL_nursery_counts.csv?raw=true")
+# http://doi.org/10.5281/zenodo.4068121
 
 # OWiD
 dat_OWiD <- fread("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv?raw=true") #https://github.com/owid/covid-19-data/tree/master/public/data
 # OWiD codebook: https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-codebook.csv
+# https://doi.org/10.1038/s41597-020-00688-8
 
 # CBS
 dat_CBS <- fread("https://opendata.cbs.nl/CsvDownload/csv/83474NED/UntypedDataSet?dl=41CFE")
 dat_CBS_prov <- fread("https://opendata.cbs.nl/CsvDownload/csv/37230ned/UntypedDataSet?dl=433DC")
 
-# Data partly from:
-# De Bruin, J. (2020). Novel Coronavirus (COVID-19) Cases in The Netherlands
-# [Data set]. Zenodo. http://doi.org/10.5281/zenodo.4068121
-#
-# AND
-#
-# Hasell, J., Mathieu, E., Beltekian, D. et al. A cross-country database of COVID-19 testing. 
-# Sci Data 7, 345 (2020). https://doi.org/10.1038/s41597-020-00688-8
-
 ###### MANIPULATE DATA ######
 # NICE
 dat_NICE_IC_C <- dat_NICE_IC_C %>% map(as.data.table) %>% rbindlist(fill = TRUE)
-dat_NICE_IC_I <- dat_NICE_IC_I %>% map(as.data.table) %>% rbindlist(fill=TRUE)
+dat_NICE_IC_I <- dat_NICE_IC_I %>% map(as.data.table) %>% rbindlist(fill = TRUE)
 dat_NICE_IC_B <- dat_NICE_IC_B %>% map(as.data.table) %>% rbindlist(fill = TRUE)
 dat_NICE_Hosp_C <- dat_NICE_Hosp_C %>% map(as.data.table) %>% rbindlist(fill = TRUE)
 dat_NICE_Hosp_I <- dat_NICE_Hosp_I %>% map(as.data.table) %>% rbindlist(fill = TRUE)
@@ -82,24 +75,23 @@ dat_RIVM_R <- dat_RIVM_R %>% map(as.data.table) %>% rbindlist(fill = TRUE)
 dat_RIVM_R$population <- as.factor(dat_RIVM_R$population)
 Rt <- subset(dat_RIVM_R, dat_RIVM_R$population == levels(dat_RIVM_R$population)[2])
 
-
 ###### CREATE DATAFRAMES ######
 # I = incidentie, C = cumulatieve incidentie, B = bezetting, A = huidig aantal, _rel = per 100,000
 # Populatie
-Population <- data.frame(NLD = tail(as.numeric(dat_CBS$`Bevolking aan het eind van de periode (aantal)`), n=1), 
-                         Limb = tail(as.numeric(dat_CBS_prov[dat_CBS_prov$`Regio's` == "Limburg (PV)"]$'Bevolking aan het einde van de periode (aantal)'), n=1)
+Population <- data.frame(NLD = tail(as.numeric(dat_CBS$`Bevolking aan het eind van de periode (aantal)`), n = 1), 
+                         Limb = tail(as.numeric(dat_CBS_prov[dat_CBS_prov$`Regio's` == "Limburg (PV)"]$'Bevolking aan het einde van de periode (aantal)'), n = 1)
 )
   
 # Gemelde patienten
 COV <- data.frame(C = COV$Total_reported,
-                  I = pmax(COV$Total_reported - shift(COV$Total_reported, n=1, fill=0, type="lag"), 0),
+                  I = pmax(COV$Total_reported - shift(COV$Total_reported, n = 1, fill = 0, type = "lag"), 0),
                   C_limb = COV_limb$Total_reported,
-                  I_limb = pmax(COV_limb$Total_reported - shift(COV_limb$Total_reported, n=1, fill=0, type="lag"), 0),
+                  I_limb = pmax(COV_limb$Total_reported - shift(COV_limb$Total_reported, n = 1, fill = 0, type = "lag"), 0),
                   date = as.Date(COV$Date_of_report)
 )
 COV <- data.frame(COV,
                   I_rel = COV$I / Population$NLD * 100000,
-                  I_rel_limb = COV$I_limb/Population$Limb * 100000,
+                  I_rel_limb = COV$I_limb / Population$Limb * 100000,
                   I_3d = rollsumr(COV$I, k = 3, fill = NA),
                   I_3d_limb = rollsumr(COV$I_limb, k = 3, fill = NA),
                   I_3d_rel = rollsumr(COV$I, k = 3, fill = NA) / Population$NLD * 100000,
@@ -121,12 +113,12 @@ COV_test <- data.frame(I_pos_7d = dat_RIVM_test$positief,
 COV_test <- subset(COV_test, COV_test$date >= date_start) # Select data from start date 
 
 Rt <- data.frame(R = Rt$Rt_avg,
-                 Rmin = Rt$Rt_low,
-                 Rmax = Rt$Rt_up,
+                 R_lo = Rt$Rt_low,
+                 R_up = Rt$Rt_up,
                  date = as.Date(Rt$Date)
 ) 
 Rt <- subset(Rt, Rt$date >= date_start) # Select data from start date 
-Rt <- Rt %>% drop_na(Rmin, Rmax) # drop NAs for min and max (to prevent problems with polygon())
+Rt <- Rt %>% drop_na(R_lo, R_up) # drop NAs for min and max (to prevent problems with polygon())
 
 # Ziekenhuisopnames (excl IC)
 # NICE
@@ -138,7 +130,6 @@ Hosp <- data.frame(C = unlist(dat_NICE_Hosp_C[, 2]),
 Hosp <- data.frame(Hosp,
                    I_3d = rollsumr(Hosp$I, k = 3, fill = NA),
                    B_3d = rollsumr(Hosp$B, k = 3, fill = NA)
-                   
 )
 Hosp <- subset(Hosp, Hosp$date >= date_start) # Select data from start date 
 Hosp <- subset(Hosp, Hosp$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
@@ -189,9 +180,9 @@ Nurs <- subset(Nurs, Nurs$date >= date_start) # Select data from start date
 
 # Sterfte
 Death <- data.frame(C = Death$Deceased,
-                    I = pmax(Death$Deceased - shift(Death$Deceased, n=1, fill=0, type="lag"), 0),
+                    I = pmax(Death$Deceased - shift(Death$Deceased, n = 1, fill = 0, type = "lag"), 0),
                     C_limb = Death_limb$Deceased,
-                    I_limb = pmax(Death_limb$Deceased - shift(Death_limb$Deceased, n=1, fill=0, type="lag"), 0),
+                    I_limb = pmax(Death_limb$Deceased - shift(Death_limb$Deceased, n = 1, fill = 0, type = "lag"), 0),
                     date = as.Date(Death$Date_of_report)
 )
 Death <- data.frame(Death, 
@@ -207,10 +198,10 @@ Int <- data.frame(continent = as.factor(dat_OWiD$continent),
                   iso = as.factor(dat_OWiD$iso_code),
                   country = as.factor(dat_OWiD$location),
                   population = dat_OWiD$population,
-                  I_COV = pmax(dat_OWiD$population * dat_OWiD$new_cases_per_million/1000000, 0),
-                  I_COV_smooth = pmax(dat_OWiD$population * dat_OWiD$new_cases_smoothed_per_million/1000000, 0),
-                  I_COV_rel = pmax(dat_OWiD$new_cases_per_million/10, 0),
-                  I_COV_rel_smooth = pmax(dat_OWiD$new_cases_smoothed_per_million/10, 0),
+                  I_COV = pmax(dat_OWiD$population * dat_OWiD$new_cases_per_million / 1000000, 0),
+                  I_COV_smooth = pmax(dat_OWiD$population * dat_OWiD$new_cases_smoothed_per_million / 1000000, 0),
+                  I_COV_rel = pmax(dat_OWiD$new_cases_per_million / 10, 0),
+                  I_COV_rel_smooth = pmax(dat_OWiD$new_cases_smoothed_per_million / 10, 0),
                   I_test_pos_rel = pmax(dat_OWiD$new_tests_per_thousand * dat_OWiD$positive_rate * 100, 0),
                   prop_test_pos = pmax(dat_OWiD$positive_rate, 0),
                   stringency_index = dat_OWiD$stringency_index,
@@ -270,10 +261,10 @@ dev.off()
 png("Figures/1_Incidentie_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV$I_3d / 3 ~ COV$date, ylab = "Incidentie/dag", xlab = "Datum", lwd = 2, xlim = c(date_start, Sys.Date() + 10),
+plot(COV$I_3d / 3 ~ COV$date, ylab = "Incidentie / dag", xlab = "Datum", lwd = 2, xlim = c(date_start, Sys.Date() + 10),
      main = "COVID-19 aantal nieuwe gemelde patienten  (RIVM-GGD)", type = "l", xaxt = "n", ylim = c(0, max(COV$I, na.rm = TRUE)))
 points(COV$I ~ COV$date, cex = 0.6, pch = 16)
-lines(COV_test$I_pos_7d  / 7 ~ COV_test$date, type = "l", lty = 3, lwd=2)
+lines(COV_test$I_pos_7d / 7 ~ COV_test$date, type = "l", lty = 3, lwd = 2)
 factor <- 1 / 7 / (100000 / Population$NLD) 
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(50 * factor, 50 * factor, 150 * factor, 150 * factor), 
@@ -287,14 +278,15 @@ polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(COV$I, na.rm = TRUE)/2000) * 2000, 2000), lty = 3, 
+abline(h = seq(0, ceiling(max(COV$I, na.rm = TRUE) / 2000) * 2000, 2000), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 points((pred_COV_I$loess[7] + pred_COV_I$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
 points(c(pred_COV_I$lo[7], pred_COV_I$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
 lines(c(pred_COV_I$lo[7], pred_COV_I$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
-text(((pred_COV_I$loess[7] + pred_COV_I$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), labels = ceiling(((pred_COV_I$loess[7] + pred_COV_I$arima[7]) / 2) / 50) * 50, col = "black", font = 1, cex = 0.6)
-legend("topleft", inset = 0.05, col = 1, lty=c(NA, "solid", "dotted"), cex=0.6, pch=c(16, NA, NA), box.lty=1, 
-       legend=c("Gemeld aantal",
+text(((pred_COV_I$loess[7] + pred_COV_I$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
+     labels = ceiling(((pred_COV_I$loess[7] + pred_COV_I$arima[7]) / 2) / 50) * 50, col = "black", font = 1, cex = 0.6)
+legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", "dotted"), cex = 0.6, pch = c(16, NA, NA), box.lty = 1, 
+       legend = c("Gemeld aantal",
                 "Gemeld aantal (3-dagen gemiddelde)",
                 "Aantal positieve testen (7-dagen gemiddelde)"))
 
@@ -304,13 +296,13 @@ dev.off()
 png("Figures/2_Incidentie_NL_per100000.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV$I_3d_rel / 3 ~ COV$date, ylab = "Incidentie/dag per 100.000", xlab = "Datum", 
+plot(COV$I_3d_rel / 3 ~ COV$date, ylab = "Incidentie / dag per 100.000", xlab = "Datum", 
      xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(COV$I_rel, na.rm = TRUE)),
-     main = "COVID-19 aantal nieuwe gemelde patienten (RIVM-GGD)", type = "l", lty = 1, lwd=2, xaxt = "n")
-lines(COV$I_3d_rel_limb  / 3 ~ COV$date, type = "l", lty = "9414", lwd=2)
+     main = "COVID-19 aantal nieuwe gemelde patienten (RIVM-GGD)", type = "l", lty = 1, lwd = 2, xaxt = "n")
+lines(COV$I_3d_rel_limb / 3 ~ COV$date, type = "l", lty = "9414", lwd = 2)
 points(COV$I_rel ~ COV$date, cex = 0.6, pch = 16)
 points(COV$I_rel_limb ~ COV$date, cex = 0.6, pch = 1)
-lines(COV_test$I_pos_7d_rel  / 7 ~ COV_test$date, type = "l", lty = 3, lwd=2)
+lines(COV_test$I_pos_7d_rel / 7 ~ COV_test$date, type = "l", lty = 3, lwd = 2)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(50 / 7, 50 / 7, 150 / 7, 150 / 7), 
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
@@ -323,10 +315,10 @@ polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(COV$I_rel, na.rm = TRUE)/5) * 5, 5), lty = 3, 
+abline(h = seq(0, ceiling(max(COV$I_rel, na.rm = TRUE) / 5) * 5, 5), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-legend("topleft", inset = 0.05, col = 1, lty=c(NA, "solid", NA, "9414", "dotted"), cex=0.6, pch=c(16, NA, 1, NA, NA), 
-       box.lty=1, legend=c("Gemeld aantal nationaal",
+legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "9414", "dotted"), cex = 0.6, pch = c(16, NA, 1, NA, NA), 
+       box.lty = 1, legend = c("Gemeld aantal nationaal",
                            "Gemeld aantal nationaal (3-dagen gemiddelde)",
                            "Gemeld aantal Limburg",
                            "Gemeld aantal Limburg (3-dagen gemiddelde)",
@@ -349,7 +341,7 @@ polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(COV_test$prop_pos * 100, na.rm = TRUE)/2) * 2, 2), lty = 3, 
+abline(h = seq(0, ceiling(max(COV_test$prop_pos * 100, na.rm = TRUE) / 2) * 2, 2), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 
 dev.off()
@@ -360,7 +352,7 @@ par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Rt$R ~ Rt$date, ylab = "R", xlab = "Datum", xlim = c(date_start, Sys.Date() + 10),
      ylim = c(0, 2), main = "COVID-19 reproductie index (RIVM)",  type = "l", lwd = 2, xaxt = "n")
-polygon(c(Rt$date, rev(Rt$date)), c(Rt$Rmin, rev(Rt$Rmax)), 
+polygon(c(Rt$date, rev(Rt$date)), c(Rt$R_lo, rev(Rt$R_up)), 
         col = adjustcolor("black", alpha.f = 0.3), border = NA)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, # circa 1.0 aangenomen als 0.98 - 1.02
           date_start - 30), c(0.98, 0.98, 1.02, 1.02), 
@@ -371,7 +363,7 @@ polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(Rt$Rmax, na.rm = TRUE)/0.5) * 0.5, 0.5), lty = 3, 
+abline(h = seq(0, ceiling(max(Rt$R_up, na.rm = TRUE) / 0.5) * 0.5, 0.5), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 
 dev.off()
@@ -380,7 +372,7 @@ dev.off()
 png("Figures/5_Opnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Hosp$I_3d / 3 ~ Hosp$date, ylab = "Incidentie/dag (met verdachte of bewezen COVID-19)", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10),
+plot(Hosp$I_3d / 3 ~ Hosp$date, ylab = "Incidentie / dag (met verdachte of bewezen COVID-19)", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10),
      ylim = c(0, max(Hosp$I, na.rm = TRUE)), main = "COVID-19 ziekenhuisopnames exclusief IC (NICE)", type = "l", lwd = 2, xaxt = "n")
 points(Hosp$I ~ Hosp$date, cex = 0.6, pch = 16)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
@@ -395,14 +387,15 @@ polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(Hosp$I, na.rm = TRUE)/50) * 50, 50), lty = 3, 
+abline(h = seq(0, ceiling(max(Hosp$I, na.rm = TRUE) / 50) * 50, 50), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 points((pred_Hosp_I$loess[7] + pred_Hosp_I$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
 points(c(pred_Hosp_I$lo[7], pred_Hosp_I$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
 lines(c(pred_Hosp_I$lo[7], pred_Hosp_I$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
-text(((pred_Hosp_I$loess[7] + pred_Hosp_I$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), labels = ceiling(((pred_Hosp_I$loess[7] + pred_Hosp_I$arima[7]) / 2) / 10) * 10, col = "black", font = 1, cex = 0.6)
-legend("topleft", inset = 0.05, col = 1, lty=c(NA, "solid"), cex=0.6, pch=c(16, NA), box.lty=1, 
-       legend=c("Aantal",
+text(((pred_Hosp_I$loess[7] + pred_Hosp_I$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
+     labels = ceiling(((pred_Hosp_I$loess[7] + pred_Hosp_I$arima[7]) / 2) / 10) * 10, col = "black", font = 1, cex = 0.6)
+legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid"), cex = 0.6, pch = c(16, NA), box.lty = 1, 
+       legend = c("Aantal",
                 "Aantal (3-dagen gemiddelde)"))
 
 dev.off()
@@ -411,7 +404,7 @@ dev.off()
 png("Figures/6_ICopnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(IC$I_3d / 3 ~ IC$date, ylab = "Incidentie/dag (met verdachte of bewezen COVID-19)", xlab = "Datum", 
+plot(IC$I_3d / 3 ~ IC$date, ylab = "Incidentie / dag (met verdachte of bewezen COVID-19)", xlab = "Datum", 
      lwd = 2, xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(IC$I, na.rm = TRUE)),
      main = "COVID-19 IC opnames (NICE)", type = "l", lty = 1, xaxt = "n")
 points(IC$I ~ IC$date, cex = 0.6, pch = 16)
@@ -427,14 +420,15 @@ polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(IC$I, na.rm = TRUE)/10) * 10, 10), lty = 3, 
+abline(h = seq(0, ceiling(max(IC$I, na.rm = TRUE) / 10) * 10, 10), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 points((pred_IC_I$loess[7] + pred_IC_I$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
 points(c(pred_IC_I$lo[7], pred_IC_I$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
 lines(c(pred_IC_I$lo[7], pred_IC_I$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
-text(((pred_IC_I$loess[7] + pred_IC_I$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), labels = ceiling(((pred_IC_I$loess[7] + pred_IC_I$arima[7]) / 2) / 5) * 5, col = "black", font = 1, cex = 0.6)
-legend("topleft", inset = 0.05, col = 1, lty=c(NA, "solid"), cex=0.6, pch=c(16, NA), box.lty=1, 
-       legend=c("Aantal",
+text(((pred_IC_I$loess[7] + pred_IC_I$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
+     labels = ceiling(((pred_IC_I$loess[7] + pred_IC_I$arima[7]) / 2) / 5) * 5, col = "black", font = 1, cex = 0.6)
+legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid"), cex = 0.6, pch = c(16, NA), box.lty = 1, 
+       legend = c("Aantal",
                 "Aantal (3-dagen gemiddelde)"))
 
 dev.off()
@@ -448,19 +442,20 @@ plot(IC_LCPS$B_3d / 3 ~ IC_LCPS$date, ylab = "Bezetting (COVID-19)", xlab = "Dat
      lwd = 2, xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(c(IC_LCPS$B, IC$B, pred_IC_LCPS_B$up), na.rm = TRUE)),
      main = "COVID-19 IC bedden bezetting (LCPS & NICE)", type = "l", lty = 1, xaxt = "n")
 points(IC_LCPS$B ~ IC_LCPS$date, cex = 0.6, pch = 16)
-lines(IC$B_3d / 3  ~ IC$date, type = "l", lty = 3, lwd=2)
+lines(IC$B_3d / 3  ~ IC$date, type = "l", lty = 3, lwd = 2)
 points(IC$B ~ IC$date, cex = 0.6, pch = 1)
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(c(IC_LCPS$B, IC$B, pred_IC_LCPS_B$up), na.rm = TRUE)/50) * 50, 50), lty = 3, 
+abline(h = seq(0, ceiling(max(c(IC_LCPS$B, IC$B, pred_IC_LCPS_B$up), na.rm = TRUE) / 50) * 50, 50), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 points((pred_IC_LCPS_B$loess[7] + pred_IC_LCPS_B$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
 points(c(pred_IC_LCPS_B$lo[7], pred_IC_LCPS_B$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
 lines(c(pred_IC_LCPS_B$lo[7], pred_IC_LCPS_B$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
-text(((pred_IC_LCPS_B$loess[7] + pred_IC_LCPS_B$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), labels = ceiling(((pred_IC_LCPS_B$loess[7] + pred_IC_LCPS_B$arima[7]) / 2) / 50) * 50, col = "black", font = 1, cex = 0.6)
-legend("topleft", inset = 0.05, col = 1, lty=c(NA, "solid", NA, "dotted"), cex=0.6, pch=c(16, NA, 1, NA), box.lty=1, 
-       legend=c("Aantal LCPS",
+text(((pred_IC_LCPS_B$loess[7] + pred_IC_LCPS_B$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
+     labels = ceiling(((pred_IC_LCPS_B$loess[7] + pred_IC_LCPS_B$arima[7]) / 2) / 50) * 50, col = "black", font = 1, cex = 0.6)
+legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "dotted"), cex = 0.6, pch = c(16, NA, 1, NA), box.lty = 1, 
+       legend = c("Aantal LCPS",
                 "Aantal LCPS (3-dagen gemiddelde)",
                 "Aantal NICE",
                 "Aantal NICE (3-dagen gemiddelde)"))
@@ -475,19 +470,20 @@ plot(IC_LCPS$B_total_3d / 3 ~ IC_LCPS$date, ylab = "Bezetting", xlab = "Datum",
      lwd = 2, xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(c(IC_LCPS$B_total, pred_IC_LCPS_B_total$up), na.rm = TRUE)),
      main = "IC bedden bezetting (LCPS)", type = "l", lty = 1, xaxt = "n")
 points(IC_LCPS$B_total ~ IC_LCPS$date, cex = 0.6, pch = 16)
-lines(IC_LCPS$B_non_covid_3d / 3  ~ IC_LCPS$date, type = "l", lty = 3, lwd=2)
+lines(IC_LCPS$B_non_covid_3d / 3  ~ IC_LCPS$date, type = "l", lty = 3, lwd = 2)
 points(IC_LCPS$B_non_covid ~ IC_LCPS$date, cex = 0.6, pch = 1)
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(c(IC_LCPS$B_total, pred_IC_LCPS_B_total$up), na.rm = TRUE)/50) * 50, 50), lty = 3, 
+abline(h = seq(0, ceiling(max(c(IC_LCPS$B_total, pred_IC_LCPS_B_total$up), na.rm = TRUE) / 50) * 50, 50), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 points((pred_IC_LCPS_B_total$loess[7] + pred_IC_LCPS_B_total$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
 points(c(pred_IC_LCPS_B_total$lo[7], pred_IC_LCPS_B_total$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
 lines(c(pred_IC_LCPS_B_total$lo[7], pred_IC_LCPS_B_total$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
-text(((pred_IC_LCPS_B_total$loess[7] + pred_IC_LCPS_B_total$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), labels = ceiling(((pred_IC_LCPS_B_total$loess[7] + pred_IC_LCPS_B_total$arima[7]) / 2) / 50) * 50, col = "black", font = 1, cex = 0.6)
-legend("topleft", inset = 0.05, col = 1, lty=c(NA, "solid", NA, "dotted"), cex=0.6, pch=c(16, NA, 1, NA), box.lty=1, 
-       legend=c("Totaal aantal",
+text(((pred_IC_LCPS_B_total$loess[7] + pred_IC_LCPS_B_total$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
+     labels = ceiling(((pred_IC_LCPS_B_total$loess[7] + pred_IC_LCPS_B_total$arima[7]) / 2) / 50) * 50, col = "black", font = 1, cex = 0.6)
+legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "dotted"), cex = 0.6, pch = c(16, NA, 1, NA), box.lty = 1, 
+       legend = c("Totaal aantal",
                 "Totaal aantal (3-dagen gemiddelde)",
                 "Aantal zonder COVID-19",
                 "Aantal zonder COVID-19 (3-dagen gemiddelde)"))
@@ -502,19 +498,20 @@ plot((IC_LCPS$B_3d + Hosp_LCPS$B_3d) / 3 ~ IC_LCPS$date, ylab = "Bezetting (COVI
      lwd = 2, xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(c(IC_LCPS$B + Hosp_LCPS$B, pred_Hosp_IC_LCPS_B_total_cov$up), na.rm = TRUE)),
      main = "COVID-19 ziekenhuisbedden bezetting (LCPS)", type = "l", lty = 1, xaxt = "n")
 points((IC_LCPS$B + Hosp_LCPS$B)  ~ IC_LCPS$date, cex = 0.6, pch = 16)
-lines(Hosp_LCPS$B_3d / 3  ~ Hosp_LCPS$date, type = "l", lty = 3, lwd=2)
+lines(Hosp_LCPS$B_3d / 3  ~ Hosp_LCPS$date, type = "l", lty = 3, lwd = 2)
 points(Hosp_LCPS$B ~ Hosp_LCPS$date, cex = 0.6, pch = 1)
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(c(IC_LCPS$B + Hosp_LCPS$B, pred_Hosp_IC_LCPS_B_total_cov$up), na.rm = TRUE)/100) * 100, 100), lty = 3, 
+abline(h = seq(0, ceiling(max(c(IC_LCPS$B + Hosp_LCPS$B, pred_Hosp_IC_LCPS_B_total_cov$up), na.rm = TRUE) / 100) * 100, 100), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 points((pred_Hosp_IC_LCPS_B_total_cov$loess[7] + pred_Hosp_IC_LCPS_B_total_cov$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
 points(c(pred_Hosp_IC_LCPS_B_total_cov$lo[7], pred_Hosp_IC_LCPS_B_total_cov$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
 lines(c(pred_Hosp_IC_LCPS_B_total_cov$lo[7], pred_Hosp_IC_LCPS_B_total_cov$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
-text(((pred_Hosp_IC_LCPS_B_total_cov$loess[7] + pred_Hosp_IC_LCPS_B_total_cov$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), labels = ceiling(((pred_Hosp_IC_LCPS_B_total_cov$loess[7] + pred_Hosp_IC_LCPS_B_total_cov$arima[7]) / 2) / 100) * 100, col = "black", font = 1, cex = 0.6)
-legend("topleft", inset = 0.05, col = 1, lty=c(NA, "solid", NA, "dotted"), cex=0.6, pch=c(16, NA, 1, NA), box.lty=1, 
-       legend=c("Aantal inclusief IC",
+text(((pred_Hosp_IC_LCPS_B_total_cov$loess[7] + pred_Hosp_IC_LCPS_B_total_cov$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
+     labels = ceiling(((pred_Hosp_IC_LCPS_B_total_cov$loess[7] + pred_Hosp_IC_LCPS_B_total_cov$arima[7]) / 2) / 100) * 100, col = "black", font = 1, cex = 0.6)
+legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "dotted"), cex = 0.6, pch = c(16, NA, 1, NA), box.lty = 1, 
+       legend = c("Aantal inclusief IC",
                 "Aantal inclusief IC (3-dagen gemiddelde)",
                 "Aantal exclusief IC",
                 "Aantal exclusief IC (3-dagen gemiddelde)"))
@@ -532,10 +529,10 @@ points(Nurs$I ~ Nurs$date, cex = 0.6, pch = 16)
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(Nurs$I, na.rm = TRUE)/5) * 5, 5), lty = 3, 
+abline(h = seq(0, ceiling(max(Nurs$I, na.rm = TRUE) / 5) * 5, 5), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-legend("topleft", inset = 0.05, col = 1, lty=c(NA, "solid"), cex=0.6, pch=c(16, NA), box.lty=1, 
-       legend=c("Aantal",
+legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid"), cex = 0.6, pch = c(16, NA), box.lty = 1, 
+       legend = c("Aantal",
                 "Aantal (3-dagen gemiddelde)"))
 
 dev.off()
@@ -544,7 +541,7 @@ dev.off()
 png("Figures/11_Sterfte_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Death$I_3d / 3 ~ Death$date, ylab = "Incidentie/dag", xlab = "Datum",
+plot(Death$I_3d / 3 ~ Death$date, ylab = "Incidentie / dag", xlab = "Datum",
      xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(Death$I, na.rm = TRUE)),  
      main = "COVID-19 sterfte (RIVM-GGD)", type = "l", lwd = 2, xaxt = "n")
 lines(Death$I_3d_limb / 3 ~ Death$date, type = "l", lty = "9414")
@@ -555,8 +552,8 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(Death$I, na.rm = TRUE) / 10) * 10, 10), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-legend("topleft", inset = 0.05, col = 1, lty=c(NA, "solid", NA, "9414"), cex=0.6, pch=c(16, NA, 1, NA), 
-       box.lty=1, legend=c("Gemeld aantal nationaal",
+legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "9414"), cex = 0.6, pch = c(16, NA, 1, NA), 
+       box.lty = 1, legend = c("Gemeld aantal nationaal",
                            "Gemeld aantal nationaal (3-dagen gemiddelde)",
                            "Gemeld aantal Limburg",
                            "Gemeld aantal Limburg (3-dagen gemiddelde)"))
@@ -567,8 +564,8 @@ dev.off()
 png("Figures/12_Incidentie_INT_per100000.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV$I_7d_rel ~ COV$date, ylab = "Incidentie/week per 100.000", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10),
-     ylim = c(0, ceiling(max(Int$I_7d_rel, na.rm = TRUE)/100) * 100), main = "COVID-19 aantal nieuwe gemelde patienten", type = "l", col = "black", lwd = 4, xaxt = "n")
+plot(COV$I_7d_rel ~ COV$date, ylab = "Incidentie / week per 100.000", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10),
+     ylim = c(0, ceiling(max(Int$I_7d_rel, na.rm = TRUE) / 100) * 100), main = "COVID-19 aantal nieuwe gemelde patienten", type = "l", col = "black", lwd = 4, xaxt = "n")
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(50, 50, 150, 150), 
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
@@ -597,9 +594,9 @@ lines(Int[Int$iso == levels(Int$iso)[17], ]$I_7d_rel ~ Int[Int$iso == levels(Int
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(Int$I_7d_rel, na.rm = TRUE)/100) * 100, 100), lty = 3, 
+abline(h = seq(0, ceiling(max(Int$I_7d_rel, na.rm = TRUE) / 100) * 100, 100), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-legend("topleft", inset = 0.05, col = c("black", rep(palette.colors(palette = "Set 1")[c(1:5, 7:9)], 3)), lwd = 2, lty=c(rep("solid", 9), rep("dashed", 8), rep("9414", 8), rep("1234", 3)), cex=0.6, box.lty=1,
+legend("topleft", inset = 0.05, col = c("black", rep(palette.colors(palette = "Set 1")[c(1:5, 7:9)], 3)), lwd = 2, lty = c(rep("solid", 9), rep("dashed", 8), rep("9414", 8), rep("1234", 3)), cex = 0.6, box.lty = 1,
        legend = levels(Int$iso)[c(13, 1:12, 14:17)])
 
 dev.off()
@@ -609,7 +606,7 @@ png("Figures/13_Perc_test_pos_INT.png", width = 1000, height = 600, pointsize = 
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV_test$prop_pos * 100 ~ COV_test$date, ylab = "%", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10),
-     ylim = c(0, ceiling(max(Int$prop_test_pos * 100, na.rm = TRUE)/5) * 5), main = "COVID-19 percentage positieve testen", type = "l", col = "black", lwd = 4, xaxt = "n")
+     ylim = c(0, ceiling(max(Int$prop_test_pos * 100, na.rm = TRUE) / 5) * 5), main = "COVID-19 percentage positieve testen", type = "l", col = "black", lwd = 4, xaxt = "n")
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
           date_start - 30), c(5, 5, 10, 10),
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
@@ -635,45 +632,12 @@ lines(Int[Int$iso == levels(Int$iso)[17], ]$prop_test_pos * 100 ~ Int[Int$iso ==
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(Int$prop_test_pos * 100, na.rm = TRUE)/5) * 5, 5), lty = 3,
+abline(h = seq(0, ceiling(max(Int$prop_test_pos * 100, na.rm = TRUE) / 5) * 5, 5), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
-legend("topleft", inset = 0.05, col = c("black", rep(palette.colors(palette = "Set 1")[c(1:5, 7:9)], 3)), lwd = 2, lty=c(rep("solid", 9), rep("dashed", 8), rep("9414", 8), rep("1234", 3)), cex=0.6, box.lty=1,
+legend("topleft", inset = 0.05, col = c("black", rep(palette.colors(palette = "Set 1")[c(1:5, 7:9)], 3)), lwd = 2, lty = c(rep("solid", 9), rep("dashed", 8), rep("9414", 8), rep("1234", 3)), cex = 0.6, box.lty = 1,
        legend = levels(Int$iso)[c(13, 1:12, 14:17)])
 
 dev.off()
-
-# Government Stringency Index (see https://ourworldindata.org/policy-responses-covid#government-stringency-index)
-png("Figures/14_Stringency_index_INT.png", width = 1000, height = 600, pointsize = 18)
-par(mar = c(5.1, 4.1, 4.1, 1.1))
-
-plot(Int[Int$iso == levels(Int$iso)[13], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[13], ]$date, ylab = "Index", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10),
-     ylim = c(0, 100), main = "Government Stringency Index - composite of nine response metrics", type = "l", col = "black", lwd = 4, xaxt = "n")
-lines(Int[Int$iso == levels(Int$iso)[1], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[1], ]$date, type = "l", col = palette.colors(palette = "Set 1")[1], lwd = 2)
-lines(Int[Int$iso == levels(Int$iso)[2], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[2], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 2)
-lines(Int[Int$iso == levels(Int$iso)[3], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[3], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 2)
-lines(Int[Int$iso == levels(Int$iso)[4], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[4], ]$date, type = "l", col = palette.colors(palette = "Set 1")[4], lwd = 2)
-lines(Int[Int$iso == levels(Int$iso)[5], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[5], ]$date, type = "l", col = palette.colors(palette = "Set 1")[5], lwd = 2)
-lines(Int[Int$iso == levels(Int$iso)[6], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[6], ]$date, type = "l", col = palette.colors(palette = "Set 1")[7], lwd = 2)
-lines(Int[Int$iso == levels(Int$iso)[7], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[7], ]$date, type = "l", col = palette.colors(palette = "Set 1")[8], lwd = 2)
-lines(Int[Int$iso == levels(Int$iso)[8], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[8], ]$date, type = "l", col = palette.colors(palette = "Set 1")[9], lwd = 2)
-lines(Int[Int$iso == levels(Int$iso)[9], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[9], ]$date, type = "l", col = palette.colors(palette = "Set 1")[1], lwd = 2, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[10], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[10], ]$date, type = "l", col = palette.colors(palette = "Set 1")[2], lwd = 2, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[11], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[11], ]$date, type = "l", col = palette.colors(palette = "Set 1")[3], lwd = 2, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[12], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[12], ]$date, type = "l", col = palette.colors(palette = "Set 1")[4], lwd = 2, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[14], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[14], ]$date, type = "l", col = palette.colors(palette = "Set 1")[5], lwd = 2, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[15], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[15], ]$date, type = "l", col = palette.colors(palette = "Set 1")[7], lwd = 2, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[16], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[16], ]$date, type = "l", col = palette.colors(palette = "Set 1")[8], lwd = 2, lty = 2)
-lines(Int[Int$iso == levels(Int$iso)[17], ]$stringency_index ~ Int[Int$iso == levels(Int$iso)[17], ]$date, type = "l", col = palette.colors(palette = "Set 1")[9], lwd = 2, lty = 2)
-axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
-abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
-       col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, 100, 5), lty = 3,
-       col = adjustcolor("grey", alpha.f = 0.7))
-legend("bottomleft", inset = 0.05, col = c("black", rep(palette.colors(palette = "Set 1")[c(1:5, 7:9)], 3)), lwd = 2, lty=c(rep("solid", 9), rep("dashed", 8), rep("9414", 8), rep("1234", 3)), cex=0.6, box.lty=1,
-       legend = levels(Int$iso)[c(13, 1:12, 14:17)])
-
-dev.off()
-
 
 ###### Save R session ######
-save.image(file="Figures/COVID19.RData") 
+save.image(file = "Figures/COVID19.RData") 
