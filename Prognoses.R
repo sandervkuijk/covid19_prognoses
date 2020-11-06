@@ -169,6 +169,8 @@ Nurs <- data.frame(A = dat_RIVM_nursery$Aantal,
                    date = as.Date(dat_RIVM_nursery$Datum)
 )
 Nurs <- data.frame(Nurs, 
+                   A_3d = rollsumr(Nurs$A, k = 3, fill = NA),
+                   A_prop = Nurs$A / 2450, #uitgaande van 2450 Verpleeghuislocaties in NL
                    I_3d = rollsumr(Nurs$I, k = 3, fill = NA)
 )
 Nurs <- subset(Nurs, Nurs$date >= date_start) # Select data from start date 
@@ -517,18 +519,22 @@ dev.off()
 png("Figures/10_Verpleeghuislocaties_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Nurs$I_3d / 3 ~ Nurs$date, ylab = "Aantal nieuwe locaties met minimaal 1 besmette bewoner", xlab = "Datum", 
-     xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(Nurs$I, na.rm = TRUE)), 
+plot(Nurs$I_3d / 3 ~ Nurs$date, ylab = "Verpleeghuislocaties", xlab = "Datum", 
+     xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(c(Nurs$I, Nurs$A_prop * 100), na.rm = TRUE)), 
      main = "COVID-19 verpleeghuislocaties (Dashboard COVID-19)", type = "l", lwd = 2, xaxt = "n")
 points(Nurs$I ~ Nurs$date, cex = 0.6, pch = 16)
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(Nurs$I, na.rm = TRUE) / 5) * 5, 5), lty = 3, 
+abline(h = seq(0, ceiling(max(c(Nurs$I, Nurs$A_prop * 100), na.rm = TRUE) / 5) * 5, 5), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid"), cex = 0.6, pch = c(16, NA), box.lty = 1, 
-       legend = c("Aantal", 
-                "Aantal (3-dagen gemiddelde)"))
+par(new = TRUE)
+plot(Nurs$A_prop * 100 ~ Nurs$date, type = "l", lty = 3, lwd = 2, xaxt = "n", yaxt = "n", ylab = "", xlab = "",
+     xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(c(Nurs$I, Nurs$A_prop * 100), na.rm = TRUE)))
+legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", "dashed"), cex = 0.6, pch = c(16, NA, NA), box.lty = 1, 
+       legend = c("Aantal nieuwe locaties met minimaal 1 besmette bewoner", 
+                  "Aantal nieuwe locaties met minimaal 1 besmette bewoner (3-dagen gemiddelde)",
+                  "Totaal aantal besmette locaties (%)"))
 
 dev.off()
 
