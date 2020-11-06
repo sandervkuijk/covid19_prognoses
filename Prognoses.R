@@ -13,7 +13,7 @@ source("f_trend.R")
 source("f_pdf_rivm_test.R")
 
 palette(c("black", "white"))
-date_start <- as.Date("2020-6-1") #as.Date("2020-3-14") #minimal 1 day after RIVM data starts 
+date_start <- as.Date("2020-6-15") #as.Date("2020-3-14") #minimal 1 day after RIVM data starts 
 lbls <- format(seq(date_start, Sys.Date() + 30, by = "2 week"), "%e %b")
 
 ###### RETRIEVE DATA ######
@@ -31,16 +31,11 @@ dat_LCPS <- data.frame(fread("https://lcps.nu/wp-content/uploads/covid-19.csv"))
 
 # RIVM
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
+dat_RIVM_R <- fromJSON(file = "https://data.rivm.nl/covid-19/COVID-19_reproductiegetal.json",simplify = TRUE)
 dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2020-11/COVID-19_WebSite_rapport_wekelijks_20201103_1216.pdf")
 # https://www.rivm.nl/documenten/wekelijkse-update-epidemiologische-situatie-covid-19-in-nederland
 # vergelijk dat_RIVM_test (laatste rij) met https://coronadashboard.rijksoverheid.nl/landelijk/positief-geteste-mensen
 
-# Wellicht onderstaande R data gebruiken direct van RIVM (ipv obv github)
-# dat_RIVM_R <- fromJSON(file = "https://data.rivm.nl/covid-19/COVID-19_reproductiegetal.json",simplify = TRUE)
-# dat_RIVM_R <- dat_RIVM_R %>% map(as.data.table) %>% rbindlist(fill = TRUE)
-
-# dat_RIVM_test <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-misc/data-test/RIVM_NL_test_latest.csv?raw=true")
-dat_RIVM_R <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-reproduction/RIVM_NL_reproduction_index.csv?raw=true")
 dat_RIVM_nursery <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-nursery/data-nursery_homes/RIVM_NL_nursery_counts.csv?raw=true")
 
 # OWiD
@@ -83,7 +78,10 @@ Death <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, data = dat_RI
 Death_limb <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, 
                         data = subset(dat_RIVM, Province == "Limburg"))
 
-dat_RIVM_R$Type <- as.factor(dat_RIVM_R$Type)
+dat_RIVM_R <- dat_RIVM_R %>% map(as.data.table) %>% rbindlist(fill = TRUE)
+dat_RIVM_R$population <- as.factor(dat_RIVM_R$population)
+Rt <- subset(dat_RIVM_R, dat_RIVM_R$population == levels(dat_RIVM_R$population)[2])
+
 
 ###### CREATE DATAFRAMES ######
 # I = incidentie, C = cumulatieve incidentie, B = bezetting, A = huidig aantal, _rel = per 100,000
@@ -122,12 +120,13 @@ COV_test <- data.frame(I_pos_7d = dat_RIVM_test$positief,
 ) 
 COV_test <- subset(COV_test, COV_test$date >= date_start) # Select data from start date 
 
-Rt <- data.frame(R = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[3], ]$Waarde,
-                 Rmin = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[2], ]$Waarde,
-                 Rmax = dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[1], ]$Waarde,
-                 date = as.Date(dat_RIVM_R[dat_RIVM_R$Type==levels(dat_RIVM_R$Type)[3], ]$Datum)
+Rt <- data.frame(R = Rt$Rt_avg,
+                 Rmin = Rt$Rt_low,
+                 Rmax = Rt$Rt_up,
+                 date = as.Date(Rt$Date)
 ) 
 Rt <- subset(Rt, Rt$date >= date_start) # Select data from start date 
+Rt <- Rt %>% drop_na(Rmin, Rmax) # drop NAs for min and max (to prevent problems with polygon())
 
 # Ziekenhuisopnames (excl IC)
 # NICE
@@ -274,6 +273,7 @@ par(mar = c(5.1, 4.1, 4.1, 1.1))
 plot(COV$I_3d / 3 ~ COV$date, ylab = "Incidentie/dag", xlab = "Datum", lwd = 2, xlim = c(date_start, Sys.Date() + 10),
      main = "COVID-19 aantal nieuwe gemelde patienten  (RIVM-GGD)", type = "l", xaxt = "n", ylim = c(0, max(COV$I, na.rm = TRUE)))
 points(COV$I ~ COV$date, cex = 0.6, pch = 16)
+lines(COV_test$I_pos_7d  / 7 ~ COV_test$date, type = "l", lty = 3, lwd=2)
 factor <- 1 / 7 / (100000 / Population$NLD) 
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(50 * factor, 50 * factor, 150 * factor, 150 * factor), 
@@ -293,9 +293,10 @@ points((pred_COV_I$loess[7] + pred_COV_I$arima[7]) / 2 ~ rep(as.Date(max(COV$dat
 points(c(pred_COV_I$lo[7], pred_COV_I$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
 lines(c(pred_COV_I$lo[7], pred_COV_I$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
 text(((pred_COV_I$loess[7] + pred_COV_I$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), labels = ceiling(((pred_COV_I$loess[7] + pred_COV_I$arima[7]) / 2) / 50) * 50, col = "black", font = 1, cex = 0.6)
-legend("topleft", inset = 0.05, col = 1, lty=c(NA, "solid"), cex=0.6, pch=c(16, NA), box.lty=1, 
+legend("topleft", inset = 0.05, col = 1, lty=c(NA, "solid", "dotted"), cex=0.6, pch=c(16, NA, NA), box.lty=1, 
        legend=c("Gemeld aantal",
-                "Gemeld aantal (3-dagen gemiddelde)"))
+                "Gemeld aantal (3-dagen gemiddelde)",
+                "Aantal positieve testen (7-dagen gemiddelde)"))
 
 dev.off()
 
@@ -305,7 +306,7 @@ par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV$I_3d_rel / 3 ~ COV$date, ylab = "Incidentie/dag per 100.000", xlab = "Datum", 
      xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(COV$I_rel, na.rm = TRUE)),
-     main = "COVID-19 aantal nieuwe patienten (RIVM-GGD)", type = "l", lty = 1, lwd=2, xaxt = "n")
+     main = "COVID-19 aantal nieuwe gemelde patienten (RIVM-GGD)", type = "l", lty = 1, lwd=2, xaxt = "n")
 lines(COV$I_3d_rel_limb  / 3 ~ COV$date, type = "l", lty = "9414", lwd=2)
 points(COV$I_rel ~ COV$date, cex = 0.6, pch = 16)
 points(COV$I_rel_limb ~ COV$date, cex = 0.6, pch = 1)
@@ -358,7 +359,7 @@ png("Figures/4_Rt_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Rt$R ~ Rt$date, ylab = "R", xlab = "Datum", xlim = c(date_start, Sys.Date() + 10),
-     ylim = c(0, 2), main = "COVID-19 reproductie index (Dashboard COVID-19)",  type = "l", lwd = 2, xaxt = "n")
+     ylim = c(0, 2), main = "COVID-19 reproductie index (RIVM)",  type = "l", lwd = 2, xaxt = "n")
 polygon(c(Rt$date, rev(Rt$date)), c(Rt$Rmin, rev(Rt$Rmax)), 
         col = adjustcolor("black", alpha.f = 0.3), border = NA)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, # circa 1.0 aangenomen als 0.98 - 1.02
