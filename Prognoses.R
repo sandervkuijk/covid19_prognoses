@@ -4,6 +4,7 @@ rm(list = ls())
 
 packages <- c("data.table", "rms", "forecast", "zoo", "tidyverse", "rjson", "pdftools")
 suppressPackageStartupMessages(lapply(packages, require, character.only = TRUE)) # load packages
+rm(packages)
 source("f_trend.R") # function to estimate and extrapolate trends over time 
 source("f_pdf_rivm_test.R") # function to extract test data from RIVM report
 
@@ -11,8 +12,17 @@ palette(c("black", "white"))
 date_start <- as.Date("2020-6-15") #as.Date("2020-3-14") #minimal 1 day after RIVM data starts 
 lbls <- format(seq(date_start, Sys.Date() + 30, by = "2 week"), "%e %b")
 
-rm(packages)
 ###### RETRIEVE INPUT DATA ######
+# RIVM
+dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
+dat_RIVM_R <- fromJSON(file = "https://data.rivm.nl/covid-19/COVID-19_reproductiegetal.json", simplify = TRUE)
+dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2020-11/COVID-19_WebSite_rapport_wekelijks_20201103_1216.pdf")
+# https://www.rivm.nl/documenten/wekelijkse-update-epidemiologische-situatie-covid-19-in-nederland
+# vergelijk dat_RIVM_test (laatste rij) met https://coronadashboard.rijksoverheid.nl/landelijk/positief-geteste-mensen
+
+dat_RIVM_nursery <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-nursery/data-nursery_homes/RIVM_NL_nursery_counts.csv?raw=true")
+# http://doi.org/10.5281/zenodo.4068121
+
 # NICE
 dat_NICE_IC_C <- fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/intake-cumulative", simplify = TRUE)
 dat_NICE_IC_I <- fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/new-intake/", simplify = TRUE)
@@ -25,16 +35,6 @@ dat_NICE_Hosp_B <- fromJSON(file = "https://www.stichting-nice.nl/covid-19/publi
 dat_LCPS <- data.frame(fread("https://lcps.nu/wp-content/uploads/covid-19.csv"))
 # Uitleg LCPS data: https://lcps.nu/datafeed/
 
-# RIVM
-dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
-dat_RIVM_R <- fromJSON(file = "https://data.rivm.nl/covid-19/COVID-19_reproductiegetal.json", simplify = TRUE)
-dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2020-11/COVID-19_WebSite_rapport_wekelijks_20201103_1216.pdf")
-# https://www.rivm.nl/documenten/wekelijkse-update-epidemiologische-situatie-covid-19-in-nederland
-# vergelijk dat_RIVM_test (laatste rij) met https://coronadashboard.rijksoverheid.nl/landelijk/positief-geteste-mensen
-
-dat_RIVM_nursery <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-nursery/data-nursery_homes/RIVM_NL_nursery_counts.csv?raw=true")
-# http://doi.org/10.5281/zenodo.4068121
-
 # OWiD
 dat_OWiD <- fread("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv?raw=true") #https://github.com/owid/covid-19-data/tree/master/public/data
 # OWiD codebook: https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-codebook.csv
@@ -45,21 +45,6 @@ dat_CBS <- fread("https://opendata.cbs.nl/CsvDownload/csv/83474NED/UntypedDataSe
 dat_CBS_prov <- fread("https://opendata.cbs.nl/CsvDownload/csv/37230ned/UntypedDataSet?dl=433DC")
 
 ###### MANIPULATE INPUT DATA ######
-# NICE
-dat_NICE_IC_C <- dat_NICE_IC_C %>% map(as.data.table) %>% rbindlist(fill = TRUE)
-dat_NICE_IC_I <- dat_NICE_IC_I %>% map(as.data.table) %>% rbindlist(fill = TRUE)
-dat_NICE_IC_B <- dat_NICE_IC_B %>% map(as.data.table) %>% rbindlist(fill = TRUE)
-dat_NICE_Hosp_C <- dat_NICE_Hosp_C %>% map(as.data.table) %>% rbindlist(fill = TRUE)
-dat_NICE_Hosp_I <- dat_NICE_Hosp_I %>% map(as.data.table) %>% rbindlist(fill = TRUE)
-dat_NICE_Hosp_B <- dat_NICE_Hosp_B %>% map(as.data.table) %>% rbindlist(fill = TRUE)
-dat_NICE_IC_I <- as.data.frame(t(dat_NICE_IC_I))[, -3]
-dat_NICE_Hosp_I <- as.data.frame(t(dat_NICE_Hosp_I))[, -3]
-
-# LCPS
-dat_LCPS$Datum <- as.Date(dat_LCPS$Datum, tryFormats = c("%d-%m-%Y"))
-dat_LCPS <- dat_LCPS[order(dat_LCPS$Datum), ]
-row.names(dat_LCPS) <- NULL
-
 # RIVM
 COV <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, data = dat_RIVM)
 COV_limb <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, 
@@ -68,18 +53,31 @@ Death <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, data = dat_RI
 Death_limb <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, 
                         data = subset(dat_RIVM, Province == "Limburg"))
 
-dat_RIVM_R <- dat_RIVM_R %>% map(as.data.table) %>% rbindlist(fill = TRUE)
+dat_RIVM_R <- as.data.frame(rbindlist(dat_RIVM_R, fill = TRUE)) 
 dat_RIVM_R$population <- as.factor(dat_RIVM_R$population)
 COV_Rt <- subset(dat_RIVM_R, dat_RIVM_R$population == levels(dat_RIVM_R$population)[2])
 
+# NICE
+dat_NICE_IC_C <- as.data.frame(rbindlist(dat_NICE_IC_C, fill = TRUE)) 
+dat_NICE_IC_I <- data.frame(rbindlist(dat_NICE_IC_I[[1]], fill = TRUE), rbindlist(dat_NICE_IC_I[[2]], fill = TRUE) [, 2])
+dat_NICE_IC_B <- as.data.frame(rbindlist(dat_NICE_IC_B, fill = TRUE)) 
+dat_NICE_Hosp_C <- as.data.frame(rbindlist(dat_NICE_Hosp_C, fill = TRUE)) 
+dat_NICE_Hosp_I <- data.frame(rbindlist(dat_NICE_Hosp_I[[1]], fill = TRUE), rbindlist(dat_NICE_Hosp_I[[2]], fill = TRUE) [, 2])
+dat_NICE_Hosp_B <- as.data.frame(rbindlist(dat_NICE_Hosp_B, fill = TRUE)) 
+
+# LCPS
+dat_LCPS$Datum <- as.Date(dat_LCPS$Datum, tryFormats = c("%d-%m-%Y"))
+dat_LCPS <- dat_LCPS[order(dat_LCPS$Datum), ]
+row.names(dat_LCPS) <- NULL
+
 # Create input data list
-dat <- list(NICE_IC_C = dat_NICE_IC_C, NICE_IC_I = dat_NICE_IC_I, NICE_IC_B = dat_NICE_IC_B,
-            NICE_Hosp_C = dat_NICE_Hosp_C, NICE_Hosp_I = dat_NICE_Hosp_I, NICE_Hosp_B = dat_NICE_Hosp_B,
-            LCPS = dat_LCPS, RIVM = dat_RIVM, RIVM_R = dat_RIVM_R, RIVM_R = dat_RIVM_R, 
-            RIVM_test = dat_RIVM_test, RIVM_nursery = dat_RIVM_nursery, OWiD = dat_OWiD,
-            CBS = dat_CBS, CBS_prov = dat_CBS_prov)
-rm(dat_NICE_IC_C, dat_NICE_IC_I, dat_NICE_IC_B, dat_NICE_Hosp_C, dat_NICE_Hosp_I, dat_NICE_Hosp_B, dat_LCPS, dat_RIVM,
-   dat_RIVM_R, dat_RIVM_test, dat_RIVM_nursery, dat_OWiD, dat_CBS, dat_CBS_prov) # Clean workspace
+dat <- list(RIVM = dat_RIVM, RIVM_R = dat_RIVM_R, RIVM_R = dat_RIVM_R, RIVM_test = dat_RIVM_test, 
+            RIVM_nursery = dat_RIVM_nursery, NICE_IC_C = dat_NICE_IC_C, NICE_IC_I = dat_NICE_IC_I, 
+            NICE_IC_B = dat_NICE_IC_B, NICE_Hosp_C = dat_NICE_Hosp_C, NICE_Hosp_I = dat_NICE_Hosp_I, 
+            NICE_Hosp_B = dat_NICE_Hosp_B, LCPS = dat_LCPS,OWiD = dat_OWiD, CBS = dat_CBS, 
+            CBS_prov = dat_CBS_prov)
+rm(dat_RIVM, dat_RIVM_R, dat_RIVM_test, dat_RIVM_nursery, dat_NICE_IC_C, dat_NICE_IC_I, dat_NICE_IC_B, 
+   dat_NICE_Hosp_C, dat_NICE_Hosp_I, dat_NICE_Hosp_B, dat_LCPS, dat_OWiD, dat_CBS, dat_CBS_prov) # Clean workspace
 
 ###### CREATE DATAFRAMES ######
 # I = incidentie, C = cumulatieve incidentie, B = bezetting, A = huidig aantal, _rel = per 100, 000
@@ -89,9 +87,9 @@ Population <- data.frame(NLD = tail(as.numeric(dat$CBS$`Bevolking aan het eind v
 )
 
 # Gemelde patienten
-COV <- data.frame(C = COV$Total_reported, 
+COV <- data.frame(C = as.numeric(COV$Total_reported), 
                   I = pmax(COV$Total_reported - shift(COV$Total_reported, n = 1, fill = 0, type = "lag"), 0), 
-                  C_limb = COV_limb$Total_reported, 
+                  C_limb = as.numeric(COV_limb$Total_reported), 
                   I_limb = pmax(COV_limb$Total_reported - shift(COV_limb$Total_reported, n = 1, fill = 0, type = "lag"), 0), 
                   date = as.Date(COV$Date_of_report)
 )
@@ -124,14 +122,14 @@ COV_Rt <- data.frame(R = COV_Rt$Rt_avg,
                      date = as.Date(COV_Rt$Date)
 ) 
 COV_Rt <- subset(COV_Rt, COV_Rt$date >= date_start) # Select data from start date 
-COV_Rt <- COV_Rt %>% drop_na(R_lo, R_up) # drop NAs for min and max (to prevent problems with polygon())
+COV_Rt <- drop_na(COV_Rt, c("R_lo", "R_up")) # drop NAs for min and max (to prevent problems with polygon())
 
 # Ziekenhuisopnames (excl IC)
 # NICE
-Hosp <- data.frame(C = unlist(dat$NICE_Hosp_C[, 2]), 
-                   I = unlist(dat$NICE_Hosp_I[, 2]) + unlist(dat$NICE_Hosp_I[, 3]), 
-                   B = unlist(dat$NICE_Hosp_B[, 2]), 
-                   date = as.Date(unlist(dat$NICE_Hosp_I[, 1]))
+Hosp <- data.frame(C = dat$NICE_Hosp_C[, 2], 
+                   I = dat$NICE_Hosp_I[, 2] + dat$NICE_Hosp_I[, 3], 
+                   B = dat$NICE_Hosp_B[, 2], 
+                   date = as.Date(dat$NICE_Hosp_I[, 1])
 )
 Hosp <- data.frame(Hosp, 
                    I_3d = rollsumr(Hosp$I, k = 3, fill = NA), 
@@ -141,19 +139,19 @@ Hosp <- subset(Hosp, Hosp$date >= date_start) # Select data from start date
 Hosp <- subset(Hosp, Hosp$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
 # LCPS (voor bezetting)
-Hosp_LCPS <- data.frame(B = dat$LCPS$Kliniek_Bedden, 
+Hosp_LCPS <- data.frame(B = as.numeric(dat$LCPS$Kliniek_Bedden), 
                         date = dat$LCPS$Datum, 
-                        B_3d = rollsumr(dat$LCPS$Kliniek_Bedden, k = 3, fill = NA)
+                        B_3d = rollsumr(as.numeric(dat$LCPS$Kliniek_Bedden), k = 3, fill = NA)
 )
 Hosp_LCPS <- subset(Hosp_LCPS, Hosp_LCPS$date >= date_start) # Select data from start date 
 Hosp_LCPS <- subset(Hosp_LCPS, Hosp_LCPS$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
 # IC opnames 
 # NICE
-IC <- data.frame(C = unlist(dat$NICE_IC_C[, 2]), 
-                 I = unlist(dat$NICE_IC_I[, 2]) + unlist(dat$NICE_IC_I[, 3]), 
-                 B = unlist(dat$NICE_IC_B[, 2]), 
-                 date = as.Date(unlist(dat$NICE_IC_I[, 1]))
+IC <- data.frame(C = dat$NICE_IC_C[, 2], 
+                 I = dat$NICE_IC_I[, 2] + dat$NICE_IC_I[, 3], 
+                 B = dat$NICE_IC_B[, 2], 
+                 date = as.Date(dat$NICE_IC_I[, 1])
 )
 IC <- data.frame(IC, 
                  I_3d = rollsumr(IC$I, k = 3, fill = NA), 
@@ -163,20 +161,21 @@ IC <- subset(IC, IC$date >= date_start) # Select data from start date
 IC <- subset(IC, IC$date <= (Sys.Date() - 1)) # Remove data that are still being updated
 
 # LCPS (voor bezetting)
-IC_LCPS <- data.frame(B = dat$LCPS$IC_Bedden_COVID, 
-                      B_non_covid = dat$LCPS$IC_Bedden_Non_COVID, 
-                      B_total = dat$LCPS$IC_Bedden_COVID + dat$LCPS$IC_Bedden_Non_COVID, 
-                      date = dat$LCPS$Datum, 
-                      B_3d = rollsumr(dat$LCPS$IC_Bedden_COVID, k = 3, fill = NA), 
-                      B_non_covid_3d = rollsumr(dat$LCPS$IC_Bedden_Non_COVID, k = 3, fill = NA), 
-                      B_total_3d = rollsumr(dat$LCPS$IC_Bedden_COVID + dat$LCPS$IC_Bedden_Non_COVID, k = 3, fill = NA)
+IC_LCPS <- data.frame(B = as.numeric(dat$LCPS$IC_Bedden_COVID), 
+                      B_non_covid = as.numeric(dat$LCPS$IC_Bedden_Non_COVID), 
+                      B_total = as.numeric(dat$LCPS$IC_Bedden_COVID) + as.numeric(dat$LCPS$IC_Bedden_Non_COVID), 
+                      date = dat$LCPS$Datum)
+IC_LCPS <- data.frame(IC_LCPS, 
+                      B_3d = rollsumr(IC_LCPS$B, k = 3, fill = NA), 
+                      B_non_covid_3d = rollsumr(IC_LCPS$B_non_covid, k = 3, fill = NA), 
+                      B_total_3d = rollsumr(IC_LCPS$B_total, k = 3, fill = NA)
 )
 IC_LCPS <- subset(IC_LCPS, IC_LCPS$date >= date_start) # Select data from start date 
 IC_LCPS <- subset(IC_LCPS, IC_LCPS$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
 # Verpleeghuislocaties
-Nurs <- data.frame(A = dat$RIVM_nursery$Aantal, 
-                   I = dat$RIVM_nursery$NieuwAantal, 
+Nurs <- data.frame(A = as.numeric(dat$RIVM_nursery$Aantal), 
+                   I = as.numeric(dat$RIVM_nursery$NieuwAantal), 
                    date = as.Date(dat$RIVM_nursery$Datum)
 )
 Nurs <- data.frame(Nurs, 
@@ -187,9 +186,9 @@ Nurs <- data.frame(Nurs,
 Nurs <- subset(Nurs, Nurs$date >= date_start) # Select data from start date 
 
 # Sterfte
-Death <- data.frame(C = Death$Deceased, 
+Death <- data.frame(C = as.numeric(Death$Deceased), 
                     I = pmax(Death$Deceased - shift(Death$Deceased, n = 1, fill = 0, type = "lag"), 0), 
-                    C_limb = Death_limb$Deceased, 
+                    C_limb = as.numeric(Death_limb$Deceased), 
                     I_limb = pmax(Death_limb$Deceased - shift(Death_limb$Deceased, n = 1, fill = 0, type = "lag"), 0), 
                     date = as.Date(Death$Date_of_report)
 )
