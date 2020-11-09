@@ -640,5 +640,5 @@ legend("topleft", inset = 0.05, col = c("black", rep(palette.colors(palette = "S
 
 dev.off()
 
-###### Save R session ######
+###### SAVE R ENVIRONMENT ######
 save.image(file = "Figures/COVID19.RData") 
