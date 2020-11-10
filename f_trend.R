@@ -25,16 +25,16 @@ pred_lo <- pmax(pmin(pred_loess_lo, pred_arima_lo), 0)
 pred_up <- pmax(pred_loess_up, pred_arima_up)
 
 pred <- data.frame(time = time_pred,
-                   loess = pred_loess,
-                   loess_lo = pred_loess_lo,
-                   loess_up = pred_loess_up,
-                   arima = pred_arima,
-                   arima_lo = pred_arima_lo,
-                   arima_up = pred_arima_up,
+                   loess = pmax(0, pred_loess),
+                   loess_lo = pmax(0, pred_loess_lo),
+                   loess_up = pmax(0, pred_loess_up),
+                   arima = pmax(0, pred_arima),
+                   arima_lo = pmax(0, pred_arima_lo),
+                   arima_up = pmax(0, pred_arima_up),
                    lo = pred_lo,
                    up = pred_up
 )
-                   
+
 # visualise fit
 plot(x ~ dag, xlim = c(0, length(dag) + time),  ylim = c(0, max(pred[, -1], x)))
 lines(loess$x, loess$fitted, col = "red")
