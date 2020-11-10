@@ -1,23 +1,22 @@
 Sys.setlocale("LC_TIME", "Dutch") # set to Dutch locale (to get Dutch month names) for this session
 options(scipen = 999)
-rm(list = ls())
-
 packages <- c("data.table", "rms", "forecast", "zoo", "tidyverse", "rjson", "pdftools")
 suppressPackageStartupMessages(lapply(packages, require, character.only = TRUE)) # load packages
-rm(packages)
+rm(list = ls())
+
 source("f_trend.R") # function to estimate and extrapolate trends over time 
 source("f_pdf_rivm_test.R") # function to extract test data from RIVM report
 
 palette(c("black", "white"))
-date_start <- as.Date("2020-6-15") #as.Date("2020-3-14") #minimal 1 day after RIVM data starts 
+date_start <- as.Date("2020-6-15") #as.Date("2020-3-15") #minimal 2 days after RIVM data starts 
 lbls <- format(seq(date_start, Sys.Date() + 30, by = "2 week"), "%e %b")
 
 ###### RETRIEVE INPUT DATA ######
 # RIVM
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
 dat_RIVM_R <- fromJSON(file = "https://data.rivm.nl/covid-19/COVID-19_reproductiegetal.json", simplify = TRUE)
-dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2020-11/COVID-19_WebSite_rapport_wekelijks_20201103_1216.pdf")
-# https://www.rivm.nl/documenten/wekelijkse-update-epidemiologische-situatie-covid-19-in-nederland
+dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2020-11/COVID-19_WebSite_rapport_wekelijks_20201110_1158.pdf")
+# https://www.rivm.nl/coronavirus-covid-19/actueel/wekelijkse-update-epidemiologische-situatie-covid-19-in-nederland
 # vergelijk dat_RIVM_test (laatste rij) met https://coronadashboard.rijksoverheid.nl/landelijk/positief-geteste-mensen
 
 dat_RIVM_nursery <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-nursery/data-nursery_homes/RIVM_NL_nursery_counts.csv?raw=true")
@@ -53,17 +52,17 @@ Death <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, data = dat_RI
 Death_limb <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, 
                         data = subset(dat_RIVM, Province == "Limburg"))
 
-dat_RIVM_R <- as.data.frame(rbindlist(dat_RIVM_R, fill = TRUE)) 
+dat_RIVM_R <- data.frame(rbindlist(dat_RIVM_R, fill = TRUE)) 
 dat_RIVM_R$population <- as.factor(dat_RIVM_R$population)
 COV_Rt <- subset(dat_RIVM_R, dat_RIVM_R$population == levels(dat_RIVM_R$population)[2])
 
 # NICE
-dat_NICE_IC_C <- as.data.frame(rbindlist(dat_NICE_IC_C, fill = TRUE)) 
+dat_NICE_IC_C <- data.frame(rbindlist(dat_NICE_IC_C, fill = TRUE)) 
 dat_NICE_IC_I <- data.frame(rbindlist(dat_NICE_IC_I[[1]], fill = TRUE), rbindlist(dat_NICE_IC_I[[2]], fill = TRUE) [, 2])
-dat_NICE_IC_B <- as.data.frame(rbindlist(dat_NICE_IC_B, fill = TRUE)) 
-dat_NICE_Hosp_C <- as.data.frame(rbindlist(dat_NICE_Hosp_C, fill = TRUE)) 
+dat_NICE_IC_B <- data.frame(rbindlist(dat_NICE_IC_B, fill = TRUE)) 
+dat_NICE_Hosp_C <- data.frame(rbindlist(dat_NICE_Hosp_C, fill = TRUE)) 
 dat_NICE_Hosp_I <- data.frame(rbindlist(dat_NICE_Hosp_I[[1]], fill = TRUE), rbindlist(dat_NICE_Hosp_I[[2]], fill = TRUE) [, 2])
-dat_NICE_Hosp_B <- as.data.frame(rbindlist(dat_NICE_Hosp_B, fill = TRUE)) 
+dat_NICE_Hosp_B <- data.frame(rbindlist(dat_NICE_Hosp_B, fill = TRUE)) 
 
 # LCPS
 dat_LCPS$Datum <- as.Date(dat_LCPS$Datum, tryFormats = c("%d-%m-%Y"))
@@ -110,8 +109,7 @@ COV <- subset(COV, COV$date >= date_start) # Select data from start date
 COV_test <- data.frame(I_pos_7d = dat$RIVM_test$positief, 
                        I_total_7d = dat$RIVM_test$totaal, 
                        prop_pos = dat$RIVM_test$prop_pos, 
-                       date = dat$RIVM_test$date, 
-                       week = dat$RIVM_test$week, 
+                       date = dat$RIVM_test$datum_tot, 
                        I_pos_7d_rel = dat$RIVM_test$positief / Population$NLD * 100000
 ) 
 COV_test <- subset(COV_test, COV_test$date >= date_start) # Select data from start date 
@@ -144,7 +142,7 @@ Hosp_LCPS <- data.frame(B = as.numeric(dat$LCPS$Kliniek_Bedden),
                         B_3d = rollsumr(as.numeric(dat$LCPS$Kliniek_Bedden), k = 3, fill = NA)
 )
 Hosp_LCPS <- subset(Hosp_LCPS, Hosp_LCPS$date >= date_start) # Select data from start date 
-Hosp_LCPS <- subset(Hosp_LCPS, Hosp_LCPS$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
+#Hosp_LCPS <- subset(Hosp_LCPS, Hosp_LCPS$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
 # IC opnames 
 # NICE
@@ -158,7 +156,7 @@ IC <- data.frame(IC,
                  B_3d = rollsumr(IC$B, k = 3, fill = NA)
 )
 IC <- subset(IC, IC$date >= date_start) # Select data from start date 
-IC <- subset(IC, IC$date <= (Sys.Date() - 1)) # Remove data that are still being updated
+IC <- subset(IC, IC$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
 # LCPS (voor bezetting)
 IC_LCPS <- data.frame(B = as.numeric(dat$LCPS$IC_Bedden_COVID), 
@@ -171,7 +169,7 @@ IC_LCPS <- data.frame(IC_LCPS,
                       B_total_3d = rollsumr(IC_LCPS$B_total, k = 3, fill = NA)
 )
 IC_LCPS <- subset(IC_LCPS, IC_LCPS$date >= date_start) # Select data from start date 
-IC_LCPS <- subset(IC_LCPS, IC_LCPS$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
+#IC_LCPS <- subset(IC_LCPS, IC_LCPS$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
 # Verpleeghuislocaties
 Nurs <- data.frame(A = as.numeric(dat$RIVM_nursery$Aantal), 
@@ -469,7 +467,7 @@ points((pred$IC_LCPS_B$loess[7] + pred$IC_LCPS_B$arima[7]) / 2 ~ rep(as.Date(max
 points(c(pred$IC_LCPS_B$lo[7], pred$IC_LCPS_B$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
 lines(c(pred$IC_LCPS_B$lo[7], pred$IC_LCPS_B$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
 text(((pred$IC_LCPS_B$loess[7] + pred$IC_LCPS_B$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
-     labels = ceiling(((pred$IC_LCPS_B$loess[7] + pred$IC_LCPS_B$arima[7]) / 2) / 50) * 50, col = "black", font = 1, cex = 0.6)
+     labels = ceiling(((pred$IC_LCPS_B$loess[7] + pred$IC_LCPS_B$arima[7]) / 2) / 10) * 10, col = "black", font = 1, cex = 0.6)
 legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "dotted"), cex = 0.6, pch = c(16, NA, 1, NA), box.lty = 1, 
        legend = c("Aantal LCPS", 
                   "Aantal LCPS (3-dagen gemiddelde)", 
@@ -497,7 +495,7 @@ points((pred$IC_LCPS_B_total$loess[7] + pred$IC_LCPS_B_total$arima[7]) / 2 ~ rep
 points(c(pred$IC_LCPS_B_total$lo[7], pred$IC_LCPS_B_total$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
 lines(c(pred$IC_LCPS_B_total$lo[7], pred$IC_LCPS_B_total$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
 text(((pred$IC_LCPS_B_total$loess[7] + pred$IC_LCPS_B_total$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
-     labels = ceiling(((pred$IC_LCPS_B_total$loess[7] + pred$IC_LCPS_B_total$arima[7]) / 2) / 50) * 50, col = "black", font = 1, cex = 0.6)
+     labels = ceiling(((pred$IC_LCPS_B_total$loess[7] + pred$IC_LCPS_B_total$arima[7]) / 2) / 25) * 25, col = "black", font = 1, cex = 0.6)
 legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "dotted"), cex = 0.6, pch = c(16, NA, 1, NA), box.lty = 1, 
        legend = c("Totaal aantal", 
                   "Totaal aantal (3-dagen gemiddelde)", 
@@ -525,7 +523,7 @@ points((pred$Hosp_IC_LCPS_B_total_cov$loess[7] + pred$Hosp_IC_LCPS_B_total_cov$a
 points(c(pred$Hosp_IC_LCPS_B_total_cov$lo[7], pred$Hosp_IC_LCPS_B_total_cov$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
 lines(c(pred$Hosp_IC_LCPS_B_total_cov$lo[7], pred$Hosp_IC_LCPS_B_total_cov$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
 text(((pred$Hosp_IC_LCPS_B_total_cov$loess[7] + pred$Hosp_IC_LCPS_B_total_cov$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
-     labels = ceiling(((pred$Hosp_IC_LCPS_B_total_cov$loess[7] + pred$Hosp_IC_LCPS_B_total_cov$arima[7]) / 2) / 100) * 100, col = "black", font = 1, cex = 0.6)
+     labels = ceiling(((pred$Hosp_IC_LCPS_B_total_cov$loess[7] + pred$Hosp_IC_LCPS_B_total_cov$arima[7]) / 2) / 25) * 25, col = "black", font = 1, cex = 0.6)
 legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "dotted"), cex = 0.6, pch = c(16, NA, 1, NA), box.lty = 1, 
        legend = c("Aantal inclusief IC", 
                   "Aantal inclusief IC (3-dagen gemiddelde)", 
