@@ -331,6 +331,11 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(COV$I_rel, na.rm = TRUE) / 5) * 5, 5), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
+points((pred$COV_I_rel$loess[7] + pred$COV_I_rel$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
+points(c(pred$COV_I_rel$lo[7], pred$COV_I_rel$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
+lines(c(pred$COV_I_rel$lo[7], pred$COV_I_rel$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
+text(((pred$COV_I_rel$loess[7] + pred$COV_I_rel$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
+     labels = ceiling(((pred$COV_I_rel$loess[7] + pred$COV_I_rel$arima[7]) / 2) / 5) * 5, col = "black", font = 1, cex = 0.6)
 legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "9414", "dotted"), cex = 0.6, pch = c(16, NA, 1, NA, NA), 
        box.lty = 1, legend = c("Gemeld aantal nationaal", 
                                "Gemeld aantal nationaal (3-dagen gemiddelde)", 
