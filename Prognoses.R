@@ -15,7 +15,7 @@ lbls <- format(seq(date_start, Sys.Date() + 30, by = "2 week"), "%e %b")
 # RIVM
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
 dat_RIVM_R <- fromJSON(file = "https://data.rivm.nl/covid-19/COVID-19_reproductiegetal.json", simplify = TRUE)
-dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2020-11/COVID-19_WebSite_rapport_wekelijks_20201110_1158.pdf")
+dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2020-11/COVID-19_WebSite_rapport_wekelijks_20201117_1237.pdf")
 # https://www.rivm.nl/coronavirus-covid-19/actueel/wekelijkse-update-epidemiologische-situatie-covid-19-in-nederland
 # vergelijk dat_RIVM_test (laatste rij) met https://coronadashboard.rijksoverheid.nl/landelijk/positief-geteste-mensen
 
@@ -85,7 +85,7 @@ Population <- data.frame(NLD = tail(as.numeric(dat$CBS$`Bevolking aan het eind v
                          Limb = tail(as.numeric(dat$CBS_prov[dat$CBS_prov$`Regio's` == "Limburg (PV)"]$'Bevolking aan het einde van de periode (aantal)'), n = 1)
 )
 
-# Gemelde patienten
+# Infectie cijfers; gemelde patienten / aantal positieve testen / Rt
 COV <- data.frame(C = as.numeric(COV$Total_reported), 
                   I = pmax(COV$Total_reported - shift(COV$Total_reported, n = 1, fill = 0, type = "lag"), 0), 
                   C_limb = as.numeric(COV_limb$Total_reported), 
@@ -136,7 +136,7 @@ Hosp <- data.frame(Hosp,
 Hosp <- subset(Hosp, Hosp$date >= date_start) # Select data from start date 
 Hosp <- subset(Hosp, Hosp$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
-# LCPS (voor bezetting)
+# LCPS (bezetting)
 Hosp_LCPS <- data.frame(B = as.numeric(dat$LCPS$Kliniek_Bedden), 
                         date = dat$LCPS$Datum, 
                         B_3d = rollsumr(as.numeric(dat$LCPS$Kliniek_Bedden), k = 3, fill = NA)
@@ -158,7 +158,7 @@ IC <- data.frame(IC,
 IC <- subset(IC, IC$date >= date_start) # Select data from start date 
 IC <- subset(IC, IC$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
-# LCPS (voor bezetting)
+# LCPS (bezetting)
 IC_LCPS <- data.frame(B = as.numeric(dat$LCPS$IC_Bedden_COVID), 
                       B_non_covid = as.numeric(dat$LCPS$IC_Bedden_Non_COVID), 
                       B_total = as.numeric(dat$LCPS$IC_Bedden_COVID) + as.numeric(dat$LCPS$IC_Bedden_Non_COVID), 
@@ -178,8 +178,9 @@ Nurs <- data.frame(A = as.numeric(dat$RIVM_nursery$Aantal),
 )
 Nurs <- data.frame(Nurs, 
                    A_3d = rollsumr(Nurs$A, k = 3, fill = NA),
-                   A_prop = Nurs$A / 2450, #uitgaande van 2450 Verpleeghuislocaties in NL
-                   I_3d = rollsumr(Nurs$I, k = 3, fill = NA)
+                   A_prop = Nurs$A / 2451, #uitgaande van 2451 Verpleeghuislocaties in NL (ligt ergens tussen 2451 - 2459)
+                   I_3d = rollsumr(Nurs$I, k = 3, fill = NA),
+                   I_7d = rollsumr(Nurs$I, k = 7, fill = NA)
 )
 Nurs <- subset(Nurs, Nurs$date >= date_start) # Select data from start date 
 
@@ -270,7 +271,7 @@ text(0.1, 1, paste0("Plots created on: ", Sys.time()), adj = c(0, 0))
 
 dev.off()
 
-###### Gemelde patiënten ###### 
+###### Infectie cijfers ###### 
 # Incidentie
 png("Figures/1_Incidentie_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
@@ -541,7 +542,7 @@ dev.off()
 png("Figures/10_Verpleeghuislocaties_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Nurs$I_3d / 3 ~ Nurs$date, ylab = "Verpleeghuislocaties", xlab = "Datum", 
+plot(Nurs$I_7d / 7 ~ Nurs$date, ylab = "Verpleeghuislocaties", xlab = "Datum", 
      xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(c(Nurs$I, Nurs$A_prop * 100), na.rm = TRUE)), 
      main = "COVID-19 verpleeghuislocaties (Dashboard COVID-19)", type = "l", lwd = 2, xaxt = "n")
 points(Nurs$I ~ Nurs$date, cex = 0.6, pch = 16)
@@ -555,7 +556,7 @@ plot(Nurs$A_prop * 100 ~ Nurs$date, type = "l", lty = 3, lwd = 2, xaxt = "n", ya
      xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(c(Nurs$I, Nurs$A_prop * 100), na.rm = TRUE)))
 legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", "dashed"), cex = 0.6, pch = c(16, NA, NA), box.lty = 1, 
        legend = c("Aantal nieuwe locaties met minimaal 1 besmette bewoner", 
-                  "Aantal nieuwe locaties met minimaal 1 besmette bewoner (3-dagen gemiddelde)",
+                  "Aantal nieuwe locaties met minimaal 1 besmette bewoner (7-dagen gemiddelde)",
                   "Totaal aantal besmette locaties (%)"))
 
 dev.off()
@@ -564,10 +565,10 @@ dev.off()
 png("Figures/11_Sterfte_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Death$I_3d / 3 ~ Death$date, ylab = "Incidentie / dag", xlab = "Datum", 
+plot(Death$I_7d / 7 ~ Death$date, ylab = "Incidentie / dag", xlab = "Datum", 
      xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(Death$I, na.rm = TRUE)), 
      main = "COVID-19 sterfte (RIVM-GGD)", type = "l", lwd = 2, xaxt = "n")
-lines(Death$I_3d_limb / 3 ~ Death$date, type = "l", lty = "9414")
+lines(Death$I_7d_limb / 7 ~ Death$date, type = "l", lty = "9414")
 points(Death$I ~ Death$date, cex = 0.6, pch = 16)
 points(Death$I_limb ~ Death$date, cex = 0.6, pch = 1)
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
@@ -577,9 +578,9 @@ abline(h = seq(0, ceiling(max(Death$I, na.rm = TRUE) / 10) * 10, 10), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "9414"), cex = 0.6, pch = c(16, NA, 1, NA), 
        box.lty = 1, legend = c("Gemeld aantal nationaal", 
-                               "Gemeld aantal nationaal (3-dagen gemiddelde)", 
+                               "Gemeld aantal nationaal (7-dagen gemiddelde)", 
                                "Gemeld aantal Limburg", 
-                               "Gemeld aantal Limburg (3-dagen gemiddelde)"))
+                               "Gemeld aantal Limburg (7-dagen gemiddelde)"))
 dev.off()
 
 ###### Internationaal ######
