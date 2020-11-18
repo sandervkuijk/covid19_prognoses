@@ -448,9 +448,10 @@ points(c(pred$IC_I$lo[7], pred$IC_I$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2
 lines(c(pred$IC_I$lo[7], pred$IC_I$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
 text(((pred$IC_I$loess[7] + pred$IC_I$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
      labels = ceiling(((pred$IC_I$loess[7] + pred$IC_I$arima[7]) / 2) / 5) * 5, col = "black", font = 1, cex = 0.6)
-legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid"), cex = 0.6, pch = c(16, NA), box.lty = 1, 
+legend("topleft", inset = 0.05, col = c(1,1,"red"), lty = c(NA, "solid", "solid"), cex = 0.6, pch = c(16, NA, NA), box.lty = 1, 
        legend = c("Aantal", 
-                  "Aantal (3-dagen gemiddelde)"))
+                  "Aantal (3-dagen gemiddelde)",
+                  "Streefwaarde kabinet (persconferentie 17/11/2020)"))
 
 dev.off()
 
