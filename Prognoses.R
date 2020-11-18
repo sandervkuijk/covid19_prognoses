@@ -442,6 +442,7 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(IC$I, na.rm = TRUE) / 10) * 10, 10), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
+abline(h=3, lty = 1,lwd = 2, col = adjustcolor("red", alpha.f = 0.7))
 points((pred$IC_I$loess[7] + pred$IC_I$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
 points(c(pred$IC_I$lo[7], pred$IC_I$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
 lines(c(pred$IC_I$lo[7], pred$IC_I$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
