@@ -429,7 +429,7 @@ plot(IC$I_3d / 3 ~ IC$date, ylab = "Incidentie / dag (met verdachte of bewezen C
      main = "COVID-19 IC opnames (NICE)", type = "l", lty = 1, xaxt = "n")
 points(IC$I ~ IC$date, cex = 0.6, pch = 16)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
-          date_start - 30), c(0, 0, 10, 10), 
+          date_start - 30), c(4, 4, 10, 10), 
         col = adjustcolor("yellow2", alpha.f = 0.3), border = NA)
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(10, 10, 20, 20), 
@@ -442,16 +442,14 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(IC$I, na.rm = TRUE) / 10) * 10, 10), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h=3, lty = 1,lwd = 2, col = adjustcolor("red", alpha.f = 0.7))
 points((pred$IC_I$loess[7] + pred$IC_I$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
 points(c(pred$IC_I$lo[7], pred$IC_I$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
 lines(c(pred$IC_I$lo[7], pred$IC_I$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
 text(((pred$IC_I$loess[7] + pred$IC_I$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
      labels = ceiling(((pred$IC_I$loess[7] + pred$IC_I$arima[7]) / 2) / 5) * 5, col = "black", font = 1, cex = 0.6)
-legend("topleft", inset = 0.05, col = c(1,1,"red"), lty = c(NA, "solid", "solid"), cex = 0.6, pch = c(16, NA, NA), box.lty = 1, 
+legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid"), cex = 0.6, pch = c(16, NA), box.lty = 1, 
        legend = c("Aantal", 
-                  "Aantal (3-dagen gemiddelde)",
-                  "Streefwaarde kabinet (persconferentie 17/11/2020)"))
+                  "Aantal (3-dagen gemiddelde)"))
 
 dev.off()
 
@@ -667,3 +665,4 @@ dev.off()
 
 ###### SAVE R ENVIRONMENT ######
 save.image(file = "Figures/COVID19.RData") 
+
