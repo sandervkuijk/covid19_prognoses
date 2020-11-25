@@ -273,7 +273,7 @@ dev.off()
 
 ###### Infectie cijfers ###### 
 # Incidentie
-png("Figures/1_Incidentie_NL.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/1_Incidentie_NL.png", width = 1200, height = 800, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV$I_3d / 3 ~ COV$date, ylab = "Incidentie / dag", xlab = "Datum", lwd = 2, xlim = c(date_start, Sys.Date() + 10), 
@@ -308,7 +308,7 @@ legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", "dotted"), cex = 0
 dev.off()
 
 # Incidentie per 100.000 
-png("Figures/2_Incidentie_NL_per100000.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/2_Incidentie_NL_per100000.png", width = 1200, height = 800, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV$I_3d_rel / 3 ~ COV$date, ylab = "Incidentie / dag per 100.000", xlab = "Datum", 
@@ -347,7 +347,7 @@ legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "9414", "dotte
 dev.off()
 
 # Percentage positieve testen
-png("Figures/3_Perc_test_pos_NL.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/3_Perc_test_pos_NL.png", width = 1200, height = 800, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV_test$prop_pos * 100 ~ COV_test$date, ylab = "%", xlab = "Datum", xlim = c(date_start, Sys.Date() + 10), 
@@ -367,7 +367,7 @@ abline(h = seq(0, ceiling(max(COV_test$prop_pos * 100, na.rm = TRUE) / 2) * 2, 2
 dev.off()
 
 # Reproductie index
-png("Figures/4_Rt_NL.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/4_Rt_NL.png", width = 1200, height = 800, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV_Rt$R ~ COV_Rt$date, ylab = "R", xlab = "Datum", xlim = c(date_start, Sys.Date() + 10), 
@@ -389,7 +389,7 @@ abline(h = seq(0, ceiling(max(COV_Rt$R_up, na.rm = TRUE) / 0.5) * 0.5, 0.5), lty
 dev.off()
 
 ###### Ziekenhuisopnames ###### 
-png("Figures/5_Opnames_NL.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/5_Opnames_NL.png", width = 1200, height = 800, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Hosp$I_3d / 3 ~ Hosp$date, ylab = "Incidentie / dag (met verdachte of bewezen COVID-19)", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10), 
@@ -421,7 +421,7 @@ legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid"), cex = 0.6, pch = 
 dev.off()
 
 ###### IC opnames ###### 
-png("Figures/6_ICopnames_NL.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/6_ICopnames_NL.png", width = 1200, height = 800, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(IC$I_3d / 3 ~ IC$date, ylab = "Incidentie / dag (met verdachte of bewezen COVID-19)", xlab = "Datum", 
@@ -455,7 +455,7 @@ dev.off()
 
 ###### Bezetting ziekenhuisbedden ###### 
 # IC bedden bezetting COVID-19
-png("Figures/7_ICbezetting_cov_NL.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/7_ICbezetting_cov_NL.png", width = 1200, height = 800, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(IC_LCPS$B_3d / 3 ~ IC_LCPS$date, ylab = "Bezetting (COVID-19)", xlab = "Datum", 
@@ -483,7 +483,7 @@ legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "dotted"), cex
 dev.off()
 
 # IC bedden bezetting non-COVID-19 en totaal
-png("Figures/8_ICbezetting_noncov_NL.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/8_ICbezetting_noncov_NL.png", width = 1200, height = 800, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(IC_LCPS$B_total_3d / 3 ~ IC_LCPS$date, ylab = "Bezetting", xlab = "Datum", 
@@ -511,7 +511,7 @@ legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "dotted"), cex
 dev.off()
 
 # Ziekenhuisbedden bezetting COVID-19
-png("Figures/9_Ziekenhuisbezetting_NL.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/9_Ziekenhuisbezetting_NL.png", width = 1200, height = 800, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot((IC_LCPS$B_3d + Hosp_LCPS$B_3d) / 3 ~ IC_LCPS$date, ylab = "Bezetting (COVID-19)", xlab = "Datum", 
@@ -539,7 +539,7 @@ legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "dotted"), cex
 dev.off()
 
 ###### Verpleeghuislocaties ######
-png("Figures/10_Verpleeghuislocaties_NL.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/10_Verpleeghuislocaties_NL.png", width = 1200, height = 800, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Nurs$I_7d / 7 ~ Nurs$date, ylab = "Verpleeghuislocaties", xlab = "Datum", 
@@ -562,7 +562,7 @@ legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", "dashed"), cex = 0
 dev.off()
 
 ###### Sterfte ######
-png("Figures/11_Sterfte_NL.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/11_Sterfte_NL.png", width = 1200, height = 800, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Death$I_7d / 7 ~ Death$date, ylab = "Incidentie / dag", xlab = "Datum", 
@@ -585,7 +585,7 @@ dev.off()
 
 ###### Internationaal ######
 # Incidentie
-png("Figures/12_Incidentie_INT_per100000.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/12_Incidentie_INT_per100000.png", width = 1200, height = 800, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV$I_7d_rel ~ COV$date, ylab = "Incidentie / week per 100.000", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10), 
@@ -626,7 +626,7 @@ legend("topleft", inset = 0.05, col = c("black", rep(palette.colors(palette = "S
 dev.off()
 
 # Percentage positieve testen per 100.000 per week
-png("Figures/13_Perc_test_pos_INT.png", width = 1000, height = 600, pointsize = 18)
+png("Figures/13_Perc_test_pos_INT.png", width = 1200, height = 800, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV_test$prop_pos * 100 ~ COV_test$date, ylab = "%", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10), 
