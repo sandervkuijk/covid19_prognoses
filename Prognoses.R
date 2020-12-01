@@ -15,12 +15,10 @@ lbls <- format(seq(date_start, Sys.Date() + 30, by = "2 week"), "%e %b")
 # RIVM
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
 dat_RIVM_R <- fromJSON(file = "https://data.rivm.nl/covid-19/COVID-19_reproductiegetal.json", simplify = TRUE)
-dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2020-11/COVID-19_WebSite_rapport_wekelijks_20201117_1237.pdf")
+dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2020-12/COVID-19_WebSite_rapport_wekelijks_20201201_1159.pdf")
 # https://www.rivm.nl/coronavirus-covid-19/actueel/wekelijkse-update-epidemiologische-situatie-covid-19-in-nederland
-# vergelijk dat_RIVM_test (laatste rij) met https://coronadashboard.rijksoverheid.nl/landelijk/positief-geteste-mensen
-
-dat_RIVM_nursery <- fread("https://github.com/J535D165/CoronaWatchNL/blob/master/data-dashboard/data-nursery/data-nursery_homes/RIVM_NL_nursery_counts.csv?raw=true")
-# http://doi.org/10.5281/zenodo.4068121
+# vergelijk dat_RIVM_test met RIVM rapport
+dat_RIVM_nursery <- fread("https://data.rivm.nl/covid-19/COVID-19_verpleeghuizen.csv") 
 
 # NICE
 dat_NICE_IC_C <- fromJSON(file = "https://www.stichting-nice.nl/covid-19/public/intake-cumulative", simplify = TRUE)
@@ -51,6 +49,8 @@ COV_limb <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum,
 Death <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, data = dat_RIVM)
 Death_limb <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, 
                         data = subset(dat_RIVM, Province == "Limburg"))
+Nurs <- aggregate(formula = Total_infected_locations_reported ~ Date_of_statistic_reported, FUN = sum, data = dat_RIVM_nursery)
+Nurs_I <- aggregate(formula = Total_new_infected_locations_reported ~ Date_of_statistic_reported, FUN = sum, data = dat_RIVM_nursery)
 
 dat_RIVM_R <- data.frame(rbindlist(dat_RIVM_R, fill = TRUE)) 
 dat_RIVM_R$population <- as.factor(dat_RIVM_R$population)
@@ -172,9 +172,9 @@ IC_LCPS <- subset(IC_LCPS, IC_LCPS$date >= date_start) # Select data from start 
 #IC_LCPS <- subset(IC_LCPS, IC_LCPS$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
 # Verpleeghuislocaties
-Nurs <- data.frame(A = as.numeric(dat$RIVM_nursery$Aantal), 
-                   I = as.numeric(dat$RIVM_nursery$NieuwAantal), 
-                   date = as.Date(dat$RIVM_nursery$Datum)
+Nurs <- data.frame(A = as.numeric(Nurs$Total_infected_locations_reported), 
+                   I = as.numeric(Nurs_I$Total_new_infected_locations_reported), 
+                   date = as.Date(Nurs$Date_of_statistic_reported)
 )
 Nurs <- data.frame(Nurs, 
                    A_3d = rollsumr(Nurs$A, k = 3, fill = NA),
@@ -544,7 +544,7 @@ par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Nurs$I_7d / 7 ~ Nurs$date, ylab = "Verpleeghuislocaties", xlab = "Datum", 
      xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(c(Nurs$I, Nurs$A_prop * 100), na.rm = TRUE)), 
-     main = "COVID-19 verpleeghuislocaties (Dashboard COVID-19)", type = "l", lwd = 2, xaxt = "n")
+     main = "COVID-19 verpleeghuislocaties (RIVM-GGD)", type = "l", lwd = 2, xaxt = "n")
 points(Nurs$I ~ Nurs$date, cex = 0.6, pch = 16)
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "2 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3, 
