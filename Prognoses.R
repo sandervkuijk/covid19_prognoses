@@ -291,7 +291,7 @@ png("Figures/1_Incidentie_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV$I_3d / 3 ~ COV$date, ylab = "Incidentie / dag", xlab = "Datum", lwd = 2, xlim = c(date_start, Sys.Date() + 10), 
-     main = "COVID-19 aantal nieuwe gemelde patienten  (RIVM-GGD)", type = "l", xaxt = "n", ylim = c(0, max(c(COV$I, pred$COV_I$up), na.rm = TRUE)))
+     main = "COVID-19 aantal nieuwe gemelde patienten  (RIVM-GGD)", type = "l", xaxt = "n", yaxt = "n", ylim = c(0, max(c(COV$I, pred$COV_I$up), na.rm = TRUE)))
 points(COV$I ~ COV$date, cex = 0.6, pch = 16)
 lines(COV_test$I_pos_7d / 7 ~ COV_test$date, type = "l", lty = 3, lwd = 2)
 factor <- 1 / 7 / (100000 / Population$NLD) 
@@ -305,9 +305,10 @@ polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30,
           date_start - 30), c(250 * factor, 250 * factor, 100000 * factor, 100000 * factor), 
         col = adjustcolor("red", alpha.f = 0.3), border = NA)
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "4 week")), labels = lbls)
+axis(side = 2, at = seq(0, ceiling(max(c(COV$I, pred$COV_I$up), na.rm = TRUE) / 2500) * 2500, 2500))
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(c(COV$I, pred$COV_I$up), na.rm = TRUE) / 2000) * 2000, 2000), lty = 3, 
+abline(h = seq(0, ceiling(max(c(COV$I, pred$COV_I$up), na.rm = TRUE) / 2500) * 2500, 2500), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 points((pred$COV_I$loess[7] + pred$COV_I$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
 points(c(pred$COV_I$lo[7], pred$COV_I$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
@@ -321,11 +322,11 @@ legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", "dotted"), cex = 0
 
 dev.off()
 
-# Incidentie per 100.000 
+# Incidentie per 100.000 inwoners 
 png("Figures/2_Incidentie_NL_per100000.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV$I_3d_rel / 3 ~ COV$date, ylab = "Incidentie / dag per 100.000", xlab = "Datum", 
+plot(COV$I_3d_rel / 3 ~ COV$date, ylab = "Incidentie / dag per 100.000 inwoners", xlab = "Datum", 
      xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(c(COV$I_rel, pred$COV_I_rel$up), na.rm = TRUE)), 
      main = "COVID-19 aantal nieuwe gemelde patienten (RIVM-GGD)", type = "l", lty = 1, lwd = 2, xaxt = "n")
 lines(COV$I_3d_rel_limb / 3 ~ COV$date, type = "l", lty = "9414", lwd = 2)
@@ -579,7 +580,7 @@ dev.off()
 png("Figures/11_Sterfte_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(Death$I_7d_rel / 7 ~ Death$date, ylab = "Incidentie / dag per 100.000", xlab = "Datum", 
+plot(Death$I_7d_rel / 7 ~ Death$date, ylab = "Incidentie / dag per 100.000 inwoners", xlab = "Datum", 
      xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(Death$I_rel, na.rm = TRUE)), 
      main = "COVID-19 sterfte (RIVM-GGD)", type = "l", lwd = 2, xaxt = "n")
 lines(Death$I_7d_rel_limb / 7 ~ Death$date, type = "l", lty = "9414")
@@ -602,7 +603,7 @@ dev.off()
 png("Figures/12_Incidentie_INT_per100000.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
-plot(COV$I_7d_rel ~ COV$date, ylab = "Incidentie / week per 100.000", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10), 
+plot(COV$I_7d_rel ~ COV$date, ylab = "Incidentie / week per 100.000 inwoners", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10), 
      ylim = c(0, ceiling(max(Int$I_7d_rel, na.rm = TRUE) / 100) * 100), main = "COVID-19 aantal nieuwe gemelde patienten", type = "l", col = "black", lwd = 4, xaxt = "n")
 polygon(c(date_start - 30, Sys.Date() + 30, Sys.Date() + 30, 
           date_start - 30), c(50, 50, 150, 150), 
@@ -639,7 +640,7 @@ legend("topleft", inset = 0.05, col = c("black", rep(palette.colors(palette = "S
 
 dev.off()
 
-# Percentage positieve testen per 100.000 per week
+# Percentage positieve testen per 100.000 inwoners per week
 png("Figures/13_Perc_test_pos_INT.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
