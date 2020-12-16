@@ -233,7 +233,7 @@ Int <- subset(Int, Int$continent == "Europe") # Select Europe
 Int <- subset(Int, Int$LE >= 80) # Select countries with life expectancy above or equal to 80 
 Int<- subset(Int, Int$population >= 1000000) # Select countries with population >= 1 mln 
 Int <- droplevels(Int)
-#Int <- subset(Int, Int$date >= date_start - 14)
+Int <- subset(Int, Int$date >= date_start - 14)
 Int <- data.frame(Int, 
                   I_3d = rollsumr(Int$I_COV, by = Int$country, k = 3, fill = NA), 
                   I_3d_rel = rollsumr(Int$I_COV, by = Int$country, k = 3, fill = NA) / Int$population * 100000, 
