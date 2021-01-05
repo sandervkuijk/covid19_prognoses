@@ -15,7 +15,7 @@ lbls <- format(seq(date_start, Sys.Date() + 30, by = "4 week"), "%e %b")
 # RIVM
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
 dat_RIVM_R <- fromJSON(file = "https://data.rivm.nl/covid-19/COVID-19_reproductiegetal.json", simplify = TRUE)
-dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2020-12/COVID-19_WebSite_rapport_wekelijks_20201222_1259.pdf")
+dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2021-01/COVID-19_WebSite_rapport_wekelijks_20210105_1254.pdf")
 # https://www.rivm.nl/coronavirus-covid-19/actueel/wekelijkse-update-epidemiologische-situatie-covid-19-in-nederland
 # vergelijk dat_RIVM_test met RIVM rapport
 dat_RIVM_nursery <- fread("https://data.rivm.nl/covid-19/COVID-19_verpleeghuizen.csv") 

@@ -2,7 +2,7 @@ f_pdf_rivm_test <- function(x) {
 
 PDF_RIVM_test <- pdf_text(x)
 lines <- unlist(strsplit(PDF_RIVM_test, '\r\n')) 
-start <- which(grepl('Aantal testen uitgevoerd door de GGD', lines)) + 2
+start <- which(grepl('Aantal testen uitgevoerd door de GGD', lines))[1] + 2
 stop <- which(grepl('Totaal', lines)) - 1
 stop <- stop[stop > start][1]
 
