@@ -310,11 +310,11 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(c(COV$I, pred$COV_I$up), na.rm = TRUE) / 2500) * 2500, 2500), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-points((pred$COV_I$loess[7] + pred$COV_I$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
-points(c(pred$COV_I$lo[7], pred$COV_I$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
-lines(c(pred$COV_I$lo[7], pred$COV_I$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
-text(((pred$COV_I$loess[7] + pred$COV_I$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
-     labels = ceiling(((pred$COV_I$loess[7] + pred$COV_I$arima[7]) / 2) / 50) * 50, col = "black", font = 1, cex = 0.6)
+#points((pred$COV_I$loess[7] + pred$COV_I$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
+#points(c(pred$COV_I$lo[7], pred$COV_I$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
+#lines(c(pred$COV_I$lo[7], pred$COV_I$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
+#text(((pred$COV_I$loess[7] + pred$COV_I$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
+     #labels = ceiling(((pred$COV_I$loess[7] + pred$COV_I$arima[7]) / 2) / 50) * 50, col = "black", font = 1, cex = 0.6)
 legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", "dotted"), cex = 0.6, pch = c(16, NA, NA), box.lty = 1, 
        legend = c("Gemeld aantal", 
                   "Gemeld aantal (3-dagen gemiddelde)", 
@@ -347,11 +347,11 @@ abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3,
        col = adjustcolor("grey", alpha.f = 0.7))
 abline(h = seq(0, ceiling(max(c(COV$I_rel, pred$COV_I_rel$up), na.rm = TRUE) / 5) * 5, 5), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-points((pred$COV_I_rel$loess[7] + pred$COV_I_rel$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
-points(c(pred$COV_I_rel$lo[7], pred$COV_I_rel$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
-lines(c(pred$COV_I_rel$lo[7], pred$COV_I_rel$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
-text(((pred$COV_I_rel$loess[7] + pred$COV_I_rel$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
-     labels = ceiling(((pred$COV_I_rel$loess[7] + pred$COV_I_rel$arima[7]) / 2) / 5) * 5, col = "black", font = 1, cex = 0.6)
+#points((pred$COV_I_rel$loess[7] + pred$COV_I_rel$arima[7]) / 2 ~ rep(as.Date(max(COV$date) + 7), 1), pch = 16, cex = 0.6, col = "black")
+#points(c(pred$COV_I_rel$lo[7], pred$COV_I_rel$up[7]) ~ rep(as.Date(max(COV$date) + 7.2), 2), pch = "-", cex = 2, col = "black")
+#lines(c(pred$COV_I_rel$lo[7], pred$COV_I_rel$up[7]) ~ rep(as.Date(max(COV$date) + 7), 2), lwd = 1, col = adjustcolor("black", alpha.f = 0.5), lty = 1)
+#text(((pred$COV_I_rel$loess[7] + pred$COV_I_rel$arima[7]) / 2) ~ as.Date(max(COV$date) + 12), 
+ #    labels = ceiling(((pred$COV_I_rel$loess[7] + pred$COV_I_rel$arima[7]) / 2) / 5) * 5, col = "black", font = 1, cex = 0.6)
 legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "9414", "dotted"), cex = 0.6, pch = c(16, NA, 1, NA, NA), 
        box.lty = 1, legend = c("Gemeld aantal nationaal", 
                                "Gemeld aantal nationaal (3-dagen gemiddelde)", 
@@ -581,7 +581,7 @@ png("Figures/11_Sterfte_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Death$I_7d_rel / 7 ~ Death$date, ylab = "Incidentie / dag per 100.000 inwoners", xlab = "Datum", 
-     xlim = c(date_start, Sys.Date() + 10), ylim = c(0, max(Death$I_rel, na.rm = TRUE)), 
+     xlim = c(date_start, Sys.Date() + 10), ylim = c(0, 1.5), 
      main = "COVID-19 sterfte (RIVM-GGD)", type = "l", lwd = 2, xaxt = "n")
 lines(Death$I_7d_rel_limb / 7 ~ Death$date, type = "l", lty = "9414")
 #points(Death$I_rel ~ Death$date, cex = 0.6, pch = 16)
@@ -589,7 +589,7 @@ lines(Death$I_7d_rel_limb / 7 ~ Death$date, type = "l", lty = "9414")
 axis(side = 1, at = as.Date(seq(date_start, Sys.Date() + 30, by = "4 week")), labels = lbls)
 abline(v = as.Date(seq(date_start, Sys.Date() + 30, by = "1 week")), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
-abline(h = seq(0, ceiling(max(Death$I_rel, na.rm = TRUE) / 0.1) * 0.1, 0.1), lty = 3, 
+abline(h = seq(0, ceiling(max(1.5) / 0.1) * 0.1, 0.1), lty = 3, 
        col = adjustcolor("grey", alpha.f = 0.7))
 legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "9414"), cex = 0.6, pch = c(16, NA, 1, NA), 
        box.lty = 1, legend = c("Gemeld aantal nationaal", 
