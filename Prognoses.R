@@ -7,6 +7,11 @@ rm(list = ls())
 source("f_trend.R") # function to estimate and extrapolate trends over time 
 source("f_pdf_rivm_test.R") # function to extract test data from RIVM report
 
+library(data.table)
+library(rms)
+library(forecast)
+library(zoo)
+
 palette(c("black", "white"))
 date_start <- as.Date("2020-6-1") #as.Date("2020-3-15") #minimal 2 days after RIVM data starts 
 lbls <- format(seq(date_start, Sys.Date() + 30, by = "4 week"), "%e %b")
@@ -14,6 +19,7 @@ lbls <- format(seq(date_start, Sys.Date() + 30, by = "4 week"), "%e %b")
 ###### RETRIEVE AND COMBINE INPUT DATA ######
 # RIVM
 dat_RIVM <- fread("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv") 
+
 dat_RIVM_R <- fromJSON(file = "https://data.rivm.nl/covid-19/COVID-19_reproductiegetal.json", simplify = TRUE)
 dat_RIVM_test <- f_pdf_rivm_test("https://www.rivm.nl/sites/default/files/2021-01/COVID-19_WebSite_rapport_wekelijks_20210105_1254.pdf")
 # https://www.rivm.nl/coronavirus-covid-19/actueel/wekelijkse-update-epidemiologische-situatie-covid-19-in-nederland
@@ -71,6 +77,11 @@ row.names(dat$LCPS) <- NULL
 ###### DATA CALCULATIONS ######
 # RIVM
 COV <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, data = dat$RIVM)
+dat_CBS <- fread("https://opendata.cbs.nl/CsvDownload/csv/83474NED/UntypedDataSet?dl=41CFE")
+# Data manipulation
+IC <- dat_NICE$CumulatiefOpnamen # Total number of IC intakes since the start of the outbreak
+IC_COV <- dat_NICE$ToenameOpnamen # Number of newly confirmed or suspected COVID-19 IC intakes 
+COV <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, data = dat_RIVM)
 COV_limb <- aggregate(formula = Total_reported ~ Date_of_report, FUN = sum, 
                       data = subset(dat$RIVM, Province == "Limburg"))
 Death <- aggregate(formula = Deceased ~ Date_of_report, FUN = sum, data = dat$RIVM)
@@ -144,6 +155,7 @@ Hosp_LCPS <- data.frame(B = as.numeric(dat$LCPS$Kliniek_Bedden),
                         B_3d = rollsumr(as.numeric(dat$LCPS$Kliniek_Bedden), k = 3, fill = NA),
                         B_7d = rollsumr(as.numeric(dat$LCPS$Kliniek_Bedden), k = 7, fill = NA)
 )
+
 Hosp_LCPS <- subset(Hosp_LCPS, Hosp_LCPS$date >= date_start) # Select data from start date 
 #Hosp_LCPS <- subset(Hosp_LCPS, Hosp_LCPS$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
@@ -179,6 +191,28 @@ IC_LCPS <- data.frame(IC_LCPS,
 IC_LCPS <- subset(IC_LCPS, IC_LCPS$date >= date_start) # Select data from start date 
 #IC_LCPS <- subset(IC_LCPS, IC_LCPS$date <= Sys.Date() - 1) # Remove todays data (as these are still being updated)
 
+IC <- subset(IC, as.Date(IC$date) >= as.Date("2020-3-13")) # Select same start date as RIVM data
+
+IC$Iweek <- rollsumr(IC$I, k = 7, fill = NA)
+IC$Iweek
+IC$I_rel <- IC$Iweek/tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1)*100000
+IC_COV <- subset(IC_COV, as.Date(IC_COV$date) >= as.Date("2020-3-13")) # Select same start date as RIVM data
+IC <- IC[1:(dim(IC)[1] - 2),] # Remove last 2 rows (as these are still being updated)
+IC_COV <- IC_COV[1:(dim(IC_COV)[1] - 2),]  # Remove last 2 rows (as these are still being updated)
+IC$dag <- 1:dim(IC)[1]
+IC_COV$dag <- 1:dim(IC_COV)[1]
+
+COV <- data.frame(C = COV$Total_reported,
+                  I = COV$Total_reported - shift(COV$Total_reported, n=1, fill=0, type="lag"),
+                  dag = 1:length(COV$Total_reported),
+                  C_limb = COV_limb$Total_reported,
+                  I_limb = COV_limb$Total_reported - shift(COV_limb$Total_reported, n=1, fill=0, type="lag")
+)
+COV$Iweek <- rollsumr(COV$I, k = 7, fill = NA)
+COV$Iweek
+COV$I_rel <- COV$Iweek/tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1)*100000
+COV$I_rel
+
 # Verpleeghuislocaties
 Nurs <- data.frame(A = as.numeric(Nurs$Total_infected_locations_reported), 
                    I = as.numeric(Nurs_I$Total_new_infected_locations_reported), 
@@ -211,6 +245,7 @@ Death <- data.frame(Death,
                     I_7d_rel = rollsumr(Death$I, k = 7, fill = NA) / Population$NLD * 100000, 
                     I_7d_rel_limb = rollsumr(Death$I_limb, k = 7, fill = NA) / Population$Limb * 100000
 )
+
 Death <- subset(Death, Death$date >= date_start) # Select data from start date 
 
 # Internationaal
@@ -228,6 +263,19 @@ Int <- data.frame(continent = as.factor(dat$OWiD$continent),
                   GDP = dat$OWiD$gdp_per_capita, 
                   LE = dat$OWiD$life_expectancy, 
                   date = as.Date(dat$OWiD$date)
+
+                  Hosp$I <- pmax(Hosp$I, 0) # correct for data errors
+Hosp$I_limb <- pmax(Hosp$I_limb, 0) # correct for data errors
+Hosp$Iweek <- rollsumr(Hosp$I, k = 7, fill = NA)
+Hosp$Iweek
+Hosp$I_rel <- Hosp$Iweek/tail(dat_CBS$`Bevolking aan het eind van de periode (aantal)`, n=1)*100000
+
+Death <- data.frame(C = Death$Deceased,
+                    I = Death$Deceased - shift(Death$Deceased, n=1, fill=0, type="lag"),
+                    dag = 1:length(Death$Deceased),
+                    C_limb = Death_limb$Deceased,
+                    I_limb = Death_limb$Deceased - shift(Death_limb$Deceased, n=1, fill=0, type="lag")
+
 )
 Int <- subset(Int, Int$continent == "Europe") # Select Europe
 Int <- subset(Int, Int$LE >= 80) # Select countries with life expectancy above or equal to 80 
@@ -246,6 +294,7 @@ row.names(Hosp) <- row.names(IC) <- NULL
 rm(COV_limb, Death_limb, Nurs_I) # Clean workspace
 
 ###### TRENDLIJN ######
+
 pred_COV_I <- f_trend(x = COV$I, time = 7, span = 0.25)$pred
 pred_COV_I_rel <- pred_COV_I
 pred_COV_I_rel[, -1] <- pred_COV_I_rel[, -1] / Population$NLD * 100000
@@ -324,6 +373,138 @@ dev.off()
 
 # Incidentie per 100.000 inwoners 
 png("Figures/2_Incidentie_NL_per100000.png", width = 1000, height = 600, pointsize = 18)
+
+
+pred <- data.frame(time = 1:7)
+
+### loess ### IC
+pred$IC_I_loess <- predict(loess(I ~ dag, IC, control = loess.control(surface = "direct")), 
+                           data.frame(dag = seq(length(IC$dag) + 1, length.out = 7)), se = TRUE)[[1]]
+pred$IC_I_loess_se <- predict(loess(I ~ dag, IC, control = loess.control(surface = "direct")), 
+                              data.frame(dag = seq(length(IC$dag) + 1, length.out = 7)), se = TRUE)[[2]]
+
+# Positief
+pred$COV_I_loess <- predict(loess(I ~ dag, COV, control = loess.control(surface = "direct")), 
+                            data.frame(dag = seq(length(COV$dag) + 1, length.out = 7)), se = TRUE)[[1]]
+pred$COV_I_loess_se <- predict(loess(I ~ dag, COV, control = loess.control(surface = "direct")), 
+                               data.frame(dag = seq(length(COV$dag) + 1, length.out = 7)), se = TRUE)[[2]]
+
+# Ziekenhuisopnames
+pred$Hosp_I_loess <- predict(loess(I ~ dag, Hosp, control = loess.control(surface = "direct")), 
+                             data.frame(dag = seq(length(Hosp$dag) + 1, length.out = 7)), se = TRUE)[[1]]
+pred$Hosp_I_loess_se <- predict(loess(I ~ dag, Hosp, control = loess.control(surface = "direct")), 
+                                data.frame(dag = seq(length(Hosp$dag) + 1, length.out = 7)), se = TRUE)[[2]]
+
+### arima ### IC
+arima <- auto.arima(IC$I)
+ autoplot(forecast(arima)) checkresiduals(arima)
+pred$IC_I <- summary(forecast(arima, h = 7))
+
+# Positief
+arima <- auto.arima(COV$I)
+ autoplot(forecast(arima))
+ checkresiduals(arima)
+pred$COV_IA <- summary(forecast(arima, h = 7))
+
+### IC ###
+pred <- data.frame(time = seq(length(IC$dag) + 1, length.out = 7))
+
+# loess
+loess <- loess(I ~ dag, IC, control = loess.control(surface = "direct"), span = 0.25)
+pred$IC_I_loess <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[1]]
+pred$IC_I_loess_se <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[2]]
+
+# arima
+arima <- auto.arima(IC$I)
+# autoplot(forecast(arima)) 
+# checkresiduals(arima)
+pred$IC_I_arima <- summary(forecast(arima, h = length(pred$time)))[[1]]
+pred$IC_I_arima_lo <- summary(forecast(arima, h = length(pred$time)))[[4]]
+pred$IC_I_arima_up <- summary(forecast(arima, h = length(pred$time)))[[5]]
+
+# fit
+plot(I ~ dag, xlim = c(0, length(dag) + 7), data = IC)
+lines(loess$x, loess$fitted, col = "red")
+lines(pred$time, pred$IC_I_loess, col = "red", lty= 3)
+lines(loess$x, arima$fitted, col = "blue")
+lines(pred$time, pred$IC_I_arima, col = "blue", lty= 3)
+
+### IC COVID-19 NEW ###
+pred$time = seq(length(IC_COV$dag) + 1, length.out = 7)
+
+# loess
+loess <- loess(I ~ dag, IC_COV, control = loess.control(surface = "direct"), span = 0.25)
+pred$IC_COV_I_loess <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[1]]
+pred$IC_COV_I_loess_se <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[2]]
+
+# arima
+arima <- auto.arima(IC_COV$I)
+# autoplot(forecast(arima)) 
+# checkresiduals(arima)
+pred$IC_COV_I_arima <- summary(forecast(arima, h = length(pred$time)))[[1]]
+pred$IC_COV_I_arima_lo <- summary(forecast(arima, h = length(pred$time)))[[4]]
+pred$IC_COV_I_arima_up <- summary(forecast(arima, h = length(pred$time)))[[5]]
+
+# fit
+plot(I ~ dag, xlim = c(0, length(dag) + 7), data = IC_COV)
+lines(loess$x, loess$fitted, col = "red")
+lines(pred$time, pred$IC_COV_I_loess, col = "red", lty= 3)
+lines(loess$x, arima$fitted, col = "blue")
+lines(pred$time, pred$IC_COV_I_arima, col = "blue", lty= 3)
+
+###  Positief ### 
+pred$time = seq(length(COV$dag) + 1, length.out = 7)
+
+# loess
+loess <- loess(I ~ dag, COV, control = loess.control(surface = "direct"), span = 0.25)
+pred$COV_I_loess <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[1]]
+pred$COV_I_loess_se <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[2]]
+
+# arima
+arima <- auto.arima(COV$I)
+# autoplot(forecast(arima)) 
+# checkresiduals(arima)
+pred$COV_I_arima <- summary(forecast(arima, h = length(pred$time)))[[1]]
+pred$COV_I_arima_lo <- summary(forecast(arima, h = length(pred$time)))[[4]]
+pred$COV_I_arima_up <- summary(forecast(arima, h = length(pred$time)))[[5]]
+
+# fit
+plot(I ~ dag, xlim = c(0, length(dag) + 7), ylim = c(0, 8000), data = COV)
+lines(loess$x, loess$fitted, col = "red")
+lines(pred$time, pred$COV_I_loess, col = "red", lty= 3)
+lines(loess$x, arima$fitted, col = "blue")
+lines(pred$time, pred$COV_I_arima, col = "blue", lty= 3)
+
+### Ziekenhuisopnames ### 
+pred$time = seq(length(Hosp$dag) + 1, length.out = 7)
+
+# loess
+loess <- loess(I ~ dag, Hosp, control = loess.control(surface = "direct"), span = 0.25)
+pred$Hosp_I_loess <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[1]]
+pred$Hosp_I_loess_se <- predict(loess, data.frame(dag = pred$time), se = TRUE)[[2]]
+
+# arima
+arima <- auto.arima(Hosp$I)
+# autoplot(forecast(arima)) 
+# checkresiduals(arima)
+pred$Hosp_I_arima <- summary(forecast(arima, h = length(pred$time)))[[1]]
+pred$Hosp_I_arima_lo <- summary(forecast(arima, h = length(pred$time)))[[4]]
+pred$Hosp_I_arima_up <- summary(forecast(arima, h = length(pred$time)))[[5]]
+
+# fit
+plot(I ~ dag, xlim = c(0, length(dag) + 7), data = Hosp)
+lines(loess$x, loess$fitted, col = "red")
+lines(pred$time, pred$Hosp_I_loess, col = "red", lty= 3)
+lines(loess$x, arima$fitted, col = "blue")
+lines(pred$time, pred$Hosp_I_arima, col = "blue", lty= 3)
+
+rm(arima, loess) #clean workspace
+pred <- pred[ , -1] #clean pred dataframe (time differs per outcome)
+
+# IC COVID-19 #####
+# IC TOTAL
+# Figuur - NL
+png("Figures/ICopnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(COV$I_3d_rel / 3 ~ COV$date, ylab = "Incidentie / dag per 100.000 inwoners", xlab = "Datum", 
@@ -403,8 +584,25 @@ abline(h = seq(0, ceiling(max(COV_Rt$R_up, na.rm = TRUE) / 0.5) * 0.5, 0.5), lty
 
 dev.off()
 
-###### Ziekenhuisopnames ###### 
+# Ziekenhuisopnames ###### 
 png("Figures/5_Opnames_NL.png", width = 1000, height = 600, pointsize = 18)
+# Figuur - NL per 100.000
+
+png("Figures/Incidentie_NL_relative.png", width = 1000, height = 600, pointsize = 18)
+par(mar = c(5.1, 4.1, 4.1, 1.1))
+
+plot(COV$I_rel[7:length(COV$I_rel)] ~ COV$dag[7:length((COV$dag))], ylim = c(0, ceiling(max(COV$I_rel[7:length(COV$I_rel)])/100) * 100), xlim = c(7, length(COV$dag)), 
+     ylab = "", xlab = "Datum", xaxt = "n", yaxt = "n", pch = 16, cex = 0.6, main = "COVID-19 - incidentie per 100.000")
+axis(side = 1, at = seq(1, length(COV$dag) + 2, 14), labels = lbls, tick = FALSE)
+tick_o <- seq(0, ceiling(max(COV$I_rel[7:length(COV$I_rel)])/100) * 100, 50)
+axis(side = 2, at = tick_o)
+abline(h = tick_o, v = seq(1, by = 7, length.out = ceiling(length(COV$dag) + 9)/7), lty = 3)
+abline(h=c(250,150,50), col=c("indianred4", "indianred3","indianred2"), lwd=3)
+dev.off()
+
+# Figuur - Limburg
+png("Figures/Incidentie_limb.png", width = 1000, height = 600, pointsize = 18)
+
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
 plot(Hosp$I_3d / 3 ~ Hosp$date, ylab = "Incidentie / dag (met verdachte of bewezen COVID-19)", xlab = "Datum", pch = 16, cex = 0.6, xlim = c(date_start, Sys.Date() + 10), 
@@ -435,7 +633,7 @@ legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid"), cex = 0.6, pch = 
 
 dev.off()
 
-###### IC opnames ###### 
+# IC opnames ###### 
 png("Figures/6_ICopnames_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
@@ -468,7 +666,7 @@ legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid"), cex = 0.6, pch = 
 
 dev.off()
 
-###### Bezetting ziekenhuisbedden ###### 
+# Bezetting ziekenhuisbedden ###### 
 # IC bedden bezetting COVID-19
 png("Figures/7_ICbezetting_cov_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
@@ -553,7 +751,7 @@ legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "dotted"), cex
 
 dev.off()
 
-###### Verpleeghuislocaties ######
+# Verpleeghuislocaties ######
 png("Figures/10_Verpleeghuislocaties_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
@@ -576,7 +774,7 @@ legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", "dashed"), cex = 0
 
 dev.off()
 
-###### Sterfte ######
+# Sterfte ######
 png("Figures/11_Sterfte_NL.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
 
@@ -598,7 +796,7 @@ legend("topleft", inset = 0.05, col = 1, lty = c(NA, "solid", NA, "9414"), cex =
                                "Gemeld aantal Limburg (7-dagen gemiddelde)"))
 dev.off()
 
-###### Internationaal ######
+# Internationaal ######
 # Incidentie
 png("Figures/12_Incidentie_INT_per100000.png", width = 1000, height = 600, pointsize = 18)
 par(mar = c(5.1, 4.1, 4.1, 1.1))
